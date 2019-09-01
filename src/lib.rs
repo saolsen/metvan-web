@@ -3,6 +3,10 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::console;
 
+macro_rules! console_log {
+    ($($t:tt)*) => (console::log_1(&JsValue::from_str(&format_args!($($t)*).to_string())))
+}
+
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
@@ -11,7 +15,6 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 pub fn main_js() -> Result<(), JsValue> {
     #[cfg(debug_assertions)]
     console_error_panic_hook::set_once();
-    console::log_1(&JsValue::from_str("This is Metvan!"));
     Ok(())
 }
 
@@ -25,7 +28,7 @@ pub struct Game {
 #[wasm_bindgen]
 impl Game {
     pub fn new() -> Result<Game, JsValue> {
-        console::log_1(&JsValue::from_str("Setting up Game"));
+        console_log!("Setting up Game");
 
         let document = web_sys::window().unwrap().document().unwrap();
         let canvas = document.get_element_by_id("canvas").unwrap();
@@ -42,24 +45,24 @@ impl Game {
             .unwrap();
 
         let dpr = web_sys::window().unwrap().device_pixel_ratio();
-        console::log_1(&JsValue::from_str(&format!("dpr: {}", dpr)));
+        console::log_1(&JsValue::from_str(&format!("Dpr: {}", dpr)));
 
         Ok(Self { dpr, canvas, ctx })
     }
 
     pub fn update(&mut self, _t: f64) -> Result<(), JsValue> {
-        let display_width = self.canvas.client_width() as u32;
-        let display_height = self.canvas.client_height() as u32;
+        let display_width = self.canvas.client_width() as u32 * self.dpr as u32;
+        let display_height = self.canvas.client_height() as u32 * self.dpr as u32;
 
         if self.canvas.width() != display_width || self.canvas.height() != display_height {
-            self.canvas.set_width(display_width * self.dpr as u32);
-            self.canvas.set_height(display_height * self.dpr as u32);
+            self.canvas.set_width(display_width);
+            self.canvas.set_height(display_height);
             self.ctx.scale(self.dpr, self.dpr)?;
-            console::log_1(&JsValue::from_str("Resizing from rust"));
+            console_log!("Resizing");
         }
 
-        let width = display_width as f64;
-        let height = display_height as f64;
+        let width = self.canvas.client_width() as f64;
+        let height = self.canvas.client_height() as f64;
 
         self.ctx.fill_rect(10.0, 10.0, 10.0, 10.0);
         self.ctx.fill_rect(width - 20.0, 10.0, 10.0, 10.0);
