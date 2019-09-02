@@ -3,6 +3,12 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::console;
 
+mod platform;
+
+use platform::Key;
+
+const TICK: f64 = 1.0 / 60.0;
+
 macro_rules! console_log {
     ($($t:tt)*) => (console::log_1(&JsValue::from_str(&format_args!($($t)*).to_string())))
 }
@@ -23,10 +29,16 @@ impl V2 {
 pub struct Input {
     pub left: bool,
     pub right: bool,
+    pub jump: bool,
 }
 
 #[derive(Debug)]
+pub struct Renderer {}
+
+#[derive(Debug)]
 pub struct Game {
+    t: f64, // Game Time
+
     p: V2,
     dp: V2,
 }
@@ -34,9 +46,30 @@ pub struct Game {
 impl Game {
     pub fn new() -> Self {
         Self {
+            t: 0.0,
             p: V2::zero(),
             dp: V2::zero(),
         }
+    }
+
+    pub fn update(&mut self, input: &Input) {
+        if input.left {
+            self.p.x -= 1.0;
+        }
+
+        if input.right {
+            self.p.x += 1.0;
+        }
+
+        if input.jump {
+            self.p.y += 20.0;
+        }
+
+        self.t += TICK;
+    }
+
+    pub fn render(&mut self, _dt_left: f64, _renderer: &mut Renderer) {
+        // @TODO: Return draw lists or something of what to render.
     }
 }
 
@@ -51,127 +84,15 @@ pub fn main_js() -> Result<(), JsValue> {
     Ok(())
 }
 
-#[derive(Debug)]
-pub enum Key {
-    Unknown,
-    Backspace,
-    Tab,
-    Return,
-    Esc,
-    Space,
-    PageUp,
-    PageDown,
-    End,
-    Home,
-    Left,
-    Right,
-    Down,
-    Insert,
-    Delete,
-    Zero,
-    One,
-    Two,
-    Three,
-    Four,
-    Five,
-    Six,
-    Seven,
-    Eight,
-    Nine,
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    G,
-    H,
-    I,
-    J,
-    K,
-    L,
-    M,
-    N,
-    O,
-    P,
-    Q,
-    R,
-    S,
-    T,
-    U,
-    V,
-    W,
-    X,
-    Y,
-    Z,
-    Tilda,
-}
-
-impl From<u32> for Key {
-    fn from(v: u32) -> Key {
-        match v {
-            8 => Key::Backspace,
-            9 => Key::Tab,
-            13 => Key::Return,
-            27 => Key::Esc,
-            32 => Key::Space,
-            33 => Key::PageUp,
-            34 => Key::PageDown,
-            35 => Key::End,
-            36 => Key::Home,
-            37 => Key::Left,
-            39 => Key::Right,
-            40 => Key::Down,
-            45 => Key::Insert,
-            46 => Key::Delete,
-            48 => Key::Zero,
-            49 => Key::One,
-            50 => Key::Two,
-            51 => Key::Three,
-            52 => Key::Four,
-            53 => Key::Five,
-            54 => Key::Six,
-            55 => Key::Seven,
-            56 => Key::Eight,
-            57 => Key::Nine,
-            65 => Key::A,
-            66 => Key::B,
-            67 => Key::C,
-            68 => Key::D,
-            69 => Key::E,
-            70 => Key::F,
-            71 => Key::G,
-            72 => Key::H,
-            73 => Key::I,
-            74 => Key::J,
-            75 => Key::K,
-            76 => Key::L,
-            77 => Key::M,
-            78 => Key::N,
-            79 => Key::O,
-            80 => Key::P,
-            81 => Key::Q,
-            82 => Key::R,
-            83 => Key::S,
-            84 => Key::T,
-            85 => Key::U,
-            86 => Key::V,
-            87 => Key::W,
-            88 => Key::X,
-            89 => Key::Y,
-            90 => Key::Z,
-            192 => Key::Tilda,
-            _ => Key::Unknown,
-        }
-    }
-}
-
 #[wasm_bindgen]
 pub struct Platform {
     dpr: f64,
     canvas: web_sys::HtmlCanvasElement,
     ctx: web_sys::CanvasRenderingContext2d,
+    last_t: f64,
+    dt: f64,
     // game stuff
+    renderer: Renderer,
     input: Input,
     game: Game,
 }
@@ -198,19 +119,29 @@ impl Platform {
         let dpr = web_sys::window().unwrap().device_pixel_ratio();
         console::log_1(&JsValue::from_str(&format!("Dpr: {}", dpr)));
 
+        let last_t = 0.0;
+        let dt = 0.0;
+
         let game = Game::new();
         console_log!("{:?}", game);
 
         let input = Input {
+            //@TODO: Input handling is more subdle than this.
             left: false,
             right: false,
+            jump: false,
         };
+
+        let renderer = Renderer {};
 
         Ok(Self {
             dpr,
             canvas,
             ctx,
+            last_t,
+            dt,
             input,
+            renderer,
             game,
         })
     }
@@ -220,22 +151,30 @@ impl Platform {
         match key {
             Key::A => self.input.left = pressed,
             Key::D => self.input.right = pressed,
+            Key::Space => {
+                if pressed {
+                    self.input.jump = true
+                }
+            }
             _ => (),
         };
-        console_log!("{:?}: pressed?: {}", key, pressed);
     }
 
-    pub fn update(&mut self, _t: f64) -> Result<(), JsValue> {
-        //self.game.p.x = 0.0;
-        //self.game.p.y = 0.0;
-
-        if self.input.left {
-            self.game.p.x -= 1.0;
+    pub fn update(&mut self, t: f64) -> Result<(), JsValue> {
+        // duration in seconds
+        let mut dt = self.dt + f64::min(1.0, (t - self.last_t) / 1000.0);
+        while dt > TICK {
+            dt = dt - TICK;
+            self.game.update(&self.input);
         }
+        self.dt = dt;
+        self.last_t = t;
 
-        if self.input.right {
-            self.game.p.x += 1.0;
-        }
+        // @TODO: There is still dt time left over
+        // Use that to interpolate stuff when rendering.
+        self.game.render(dt, &mut self.renderer);
+
+        // @TODO: Gravity!
 
         let display_width = self.canvas.client_width() as u32 * self.dpr as u32;
         let display_height = self.canvas.client_height() as u32 * self.dpr as u32;
@@ -264,14 +203,16 @@ impl Platform {
         // @Q: Why can this fail?
         self.ctx.translate(width / 2.0, height / 2.0)?;
         // Now we have 0,0 in the center of the screen
-        self.ctx.set_fill_style(&JsValue::from_str("red"));
-        self.ctx.fill_rect(-5.0, -20.0, 10.0, 20.0);
         self.ctx.set_fill_style(&JsValue::from_str("black"));
         self.ctx.begin_path();
         self.ctx.arc(0.0, 0.0, 5.0, 0.0, f64::consts::PI * 2.0)?;
+        self.ctx.set_fill_style(&JsValue::from_str("red"));
+        self.ctx.fill_rect(-5.0, -20.0, 10.0, 20.0);
         self.ctx.stroke();
 
         self.ctx.restore();
+
+        self.input.jump = false;
 
         Ok(())
     }

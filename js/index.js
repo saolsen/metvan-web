@@ -10,9 +10,10 @@ import("../pkg/index.js")
         document.addEventListener('keydown', function (ev) { return onkey(ev, ev.keyCode, true); }, false);
         document.addEventListener('keyup', function (ev) { return onkey(ev, ev.keyCode, false); }, false);
 
-        function renderLoop(t) {
+        function renderLoop() {
+            let t = window.performance.now();
             platform.update(t);
             requestAnimationFrame(renderLoop);
         }
-        renderLoop(0);
+        renderLoop();
     }).catch(console.error);
