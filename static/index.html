@@ -15,11 +15,23 @@
 
     #canvas {
       width: 100vw;
-      height: 100vh;
+      height: calc(100vw * 9 / 16);
+      margin: auto;
       position: absolute;
-      top: 0;
-      left: 0;
+      top: 0px;
+      right: 0px;
+      bottom: 0px;
+      left: 0px;
+      background: pink;
     }
+
+    /* // @TODO: scaling like this messes up my canvas size
+    @media (min-width: 177.778vh) {
+      #canvas {
+        height: 100vw;
+        width: calc(100vh * 16 / 9);
+      }
+    } */
   </style>
 </head>
 

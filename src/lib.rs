@@ -43,6 +43,11 @@ pub struct Game {
     dp: V2,
 }
 
+// How can we figure out the physics numbers.
+
+// I think I want the max jump height to be 3.
+// That would let me have a really big jump.
+
 impl Game {
     pub fn new() -> Self {
         Self {
@@ -54,15 +59,15 @@ impl Game {
 
     pub fn update(&mut self, input: &Input) {
         if input.left {
-            self.p.x -= 1.0;
+            self.p.x -= 0.01;
         }
 
         if input.right {
-            self.p.x += 1.0;
+            self.p.x += 0.01;
         }
 
         if input.jump {
-            self.p.y += 20.0;
+            self.p.y += 3.0;
         }
 
         self.t += TICK;
@@ -169,6 +174,7 @@ impl Platform {
         }
         self.dt = dt;
         self.last_t = t;
+        self.input.jump = false;
 
         // @TODO: There is still dt time left over
         // Use that to interpolate stuff when rendering.
@@ -188,32 +194,48 @@ impl Platform {
 
         let width = self.canvas.client_width() as f64;
         let height = self.canvas.client_height() as f64;
+        let aspect_ratio = width / height;
+
+        // tile size
+        let ts = width / 16.0;
+        // half tile size
+        let hts = ts / 2.0;
+
+        // assumes we're 16 x 9
+        // @TODO: This is a bad way to check this.
+        assert_eq!((aspect_ratio * 100.0) as i64, 177);
 
         self.ctx.clear_rect(0.0, 0.0, width, height);
 
-        self.ctx.fill_rect(10.0, 10.0, 10.0, 10.0);
-        self.ctx.fill_rect(width - 20.0, 10.0, 10.0, 10.0);
-        self.ctx.fill_rect(width - 20.0, height - 20.0, 10.0, 10.0);
-        self.ctx.fill_rect(10.0, height - 20.0, 10.0, 10.0);
+        self.ctx.fill_rect(0.0, 0.0, hts, hts);
+        self.ctx.fill_rect(width - hts, 0.0, hts, hts);
+        self.ctx.fill_rect(width - hts, height - hts, hts, hts);
+        self.ctx.fill_rect(0.0, height - hts, hts, hts);
 
         self.ctx.save();
-        self.ctx
-            .translate(self.game.p.x as f64, -self.game.p.y as f64)?;
-
         // @Q: Why can this fail?
-        self.ctx.translate(width / 2.0, height / 2.0)?;
         // Now we have 0,0 in the center of the screen
+        self.ctx.translate(width / 2.0, height / 2.0)?;
+
+        // Draw character
+        self.ctx.save();
+        self.ctx
+            .translate(self.game.p.x as f64 * ts, -self.game.p.y as f64 * ts)?;
+
         self.ctx.set_fill_style(&JsValue::from_str("black"));
         self.ctx.begin_path();
-        self.ctx.arc(0.0, 0.0, 5.0, 0.0, f64::consts::PI * 2.0)?;
+        // self.ctx
+        //     .arc(0.0, 0.0, hts / 2.0, 0.0, f64::consts::PI * 2.0)?;
         self.ctx.set_fill_style(&JsValue::from_str("red"));
-        self.ctx.fill_rect(-5.0, -20.0, 10.0, 20.0);
+        self.ctx.fill_rect(-hts / 2.0, -ts, hts, ts);
         self.ctx.stroke();
-
         self.ctx.restore();
 
-        self.input.jump = false;
+        self.ctx.restore();
 
         Ok(())
     }
 }
+
+// If whole screen is 16x9, dude is like 2 tall.
+// That's a good starting point. prolly not exactly right.
