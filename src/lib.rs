@@ -20,6 +20,10 @@ pub struct V2 {
 }
 
 impl V2 {
+    pub fn new(x: f32, y: f32) -> Self {
+        V2 { x, y }
+    }
+
     pub fn zero() -> Self {
         V2 { x: 0.0, y: 0.0 }
     }
@@ -48,6 +52,9 @@ pub struct Game {
 // I think I want the max jump height to be 3.
 // That would let me have a really big jump.
 
+// I think all my parameters have to come from calculations
+// about what I want my max jump height to be and my max speed or something like that.
+
 impl Game {
     pub fn new() -> Self {
         Self {
@@ -58,17 +65,41 @@ impl Game {
     }
 
     pub fn update(&mut self, input: &Input) {
+        let speed = 0.01;
+        let mut accel = V2::zero();
+
         if input.left {
-            self.p.x -= 0.01;
+            accel.x -= speed;
         }
 
         if input.right {
-            self.p.x += 0.01;
+            accel.x += speed;
         }
 
-        if input.jump {
-            self.p.y += 3.0;
+        // if input.jump {
+        //     self.p.y += 3.0;
+        // }
+
+        // I think maybe I do want more "full" physics so you can puch
+        // blocks around or whatever. For now just want to hack it though.
+
+        let mut new_dp = V2::new(self.dp.x + accel.x, self.dp.y + accel.y);
+
+        // @TODO: I really neec better vectors...
+        if (accel.x > 0.0 && self.dp.x < 0.0) || (accel.x < 0.0 && self.dp.x > 0.0) {
+            new_dp.x += accel.x * 0.5; // reactivity precent
         }
+
+        self.dp.x = new_dp.x;
+        self.dp.y = new_dp.y;
+
+        // @TODO: Real integration here, not just adding.
+        self.p.x += self.dp.x;
+        self.p.y += self.dp.y;
+
+        // @TODO: Friction
+
+        // @TODO: Everything
 
         self.t += TICK;
     }
