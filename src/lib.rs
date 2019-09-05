@@ -65,37 +65,42 @@ impl Game {
     }
 
     pub fn update(&mut self, input: &Input) {
-        let speed = 0.01;
+        let dt = 1.0 / 60.0;
+        // What we want are rigid body dynamics.
         let mut accel = V2::zero();
 
         if input.left {
-            accel.x -= speed;
+            accel.x -= 1.0;
         }
 
         if input.right {
-            accel.x += speed;
+            accel.x += 1.0;
         }
 
-        // if input.jump {
-        //     self.p.y += 3.0;
-        // }
+        // @TODO: This is in pixels right now. Don't
+        let speed = 50.0;
 
-        // I think maybe I do want more "full" physics so you can puch
-        // blocks around or whatever. For now just want to hack it though.
+        accel.x *= speed;
+        accel.y *= speed;
 
-        let mut new_dp = V2::new(self.dp.x + accel.x, self.dp.y + accel.y);
+        // @TODO: Better friction
+        accel.x += -5.0 * self.dp.x;
+        accel.y += -5.0 * self.dp.y;
 
         // @TODO: I really neec better vectors...
+        // this is a dot product or something.
         if (accel.x > 0.0 && self.dp.x < 0.0) || (accel.x < 0.0 && self.dp.x > 0.0) {
-            new_dp.x += accel.x * 0.5; // reactivity precent
+            accel.x += accel.x * 0.5; // reactivity precent
         }
 
-        self.dp.x = new_dp.x;
-        self.dp.y = new_dp.y;
+        let mut new_p = V2::new(
+            0.5 * accel.x * (dt * dt) + self.dp.x * dt + self.p.x,
+            0.5 * accel.y * (dt * dt) + self.dp.y * dt + self.p.y,
+        );
+        let mut new_dp = V2::new(accel.x * dt + self.dp.x, accel.y * dt + self.dp.y);
 
-        // @TODO: Real integration here, not just adding.
-        self.p.x += self.dp.x;
-        self.p.y += self.dp.y;
+        self.dp = new_dp;
+        self.p = new_p;
 
         // @TODO: Friction
 
