@@ -1,3 +1,5 @@
+extern crate nalgebra_glm as glm;
+
 use std::f64;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -11,22 +13,6 @@ const TICK: f64 = 1.0 / 60.0;
 
 macro_rules! console_log {
     ($($t:tt)*) => (console::log_1(&JsValue::from_str(&format_args!($($t)*).to_string())))
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct V2 {
-    pub x: f32,
-    pub y: f32,
-}
-
-impl V2 {
-    pub fn new(x: f32, y: f32) -> Self {
-        V2 { x, y }
-    }
-
-    pub fn zero() -> Self {
-        V2 { x: 0.0, y: 0.0 }
-    }
 }
 
 #[derive(Debug)]
@@ -43,8 +29,8 @@ pub struct Renderer {}
 pub struct Game {
     t: f64, // Game Time
 
-    p: V2,
-    dp: V2,
+    player_p: glm::Vec2,
+    player_dp: glm::Vec2,
 }
 
 // How can we figure out the physics numbers.
@@ -59,53 +45,39 @@ impl Game {
     pub fn new() -> Self {
         Self {
             t: 0.0,
-            p: V2::zero(),
-            dp: V2::zero(),
+            player_p: glm::vec2(0.0, 0.0),
+            player_dp: glm::vec2(0.0, 0.0),
         }
     }
 
     pub fn update(&mut self, input: &Input) {
         let dt = 1.0 / 60.0;
         // What we want are rigid body dynamics.
-        let mut accel = V2::zero();
-
+        let mut accel = glm::vec2(0.0, 0.0);
         if input.left {
             accel.x -= 1.0;
         }
-
         if input.right {
             accel.x += 1.0;
         }
-
         // @TODO: This is in pixels right now. Don't
         let speed = 50.0;
-
-        accel.x *= speed;
-        accel.y *= speed;
-
+        accel *= speed;
         // @TODO: Better friction
-        accel.x += -5.0 * self.dp.x;
-        accel.y += -5.0 * self.dp.y;
-
-        // @TODO: I really neec better vectors...
+        accel += -5.0 * self.player_dp;
+        // @NOTE: "reactivity"
+        // @TODO: I really need better vectors...
         // this is a dot product or something.
-        if (accel.x > 0.0 && self.dp.x < 0.0) || (accel.x < 0.0 && self.dp.x > 0.0) {
-            accel.x += accel.x * 0.5; // reactivity precent
+        if (accel.x > 0.0 && self.player_dp.x < 0.0) || (accel.x < 0.0 && self.player_dp.x > 0.0) {
+            accel.x += accel.x * 0.5; // reactivity percent
         }
-
-        let mut new_p = V2::new(
-            0.5 * accel.x * (dt * dt) + self.dp.x * dt + self.p.x,
-            0.5 * accel.y * (dt * dt) + self.dp.y * dt + self.p.y,
-        );
-        let mut new_dp = V2::new(accel.x * dt + self.dp.x, accel.y * dt + self.dp.y);
-
-        self.dp = new_dp;
-        self.p = new_p;
-
-        // @TODO: Friction
-
+        // @TODO: Gravity and Jumping
+        let new_p = 0.5 * accel * (dt * dt) + self.player_dp * dt + self.player_p;
+        let new_dp = accel * dt + self.player_dp;
+        self.player_dp = new_dp;
+        self.player_p = new_p;
+        // @TODO: Collision Detection
         // @TODO: Everything
-
         self.t += TICK;
     }
 
@@ -255,8 +227,10 @@ impl Platform {
 
         // Draw character
         self.ctx.save();
-        self.ctx
-            .translate(self.game.p.x as f64 * ts, -self.game.p.y as f64 * ts)?;
+        self.ctx.translate(
+            self.game.player_p.x as f64 * ts,
+            -self.game.player_p.y as f64 * ts,
+        )?;
 
         self.ctx.set_fill_style(&JsValue::from_str("black"));
         self.ctx.begin_path();
