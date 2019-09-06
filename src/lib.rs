@@ -9,6 +9,27 @@ mod platform;
 
 use platform::Key;
 
+const TILE_MAP: [u8; 32 * 18] = [
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+];
+
 const TICK: f64 = 1.0 / 60.0;
 
 macro_rules! console_log {
@@ -45,7 +66,7 @@ impl Game {
     pub fn new() -> Self {
         Self {
             t: 0.0,
-            player_p: glm::vec2(0.0, 0.0),
+            player_p: glm::vec2(1.0, 0.5),
             player_dp: glm::vec2(0.0, 0.0),
         }
     }
@@ -60,7 +81,6 @@ impl Game {
         if input.right {
             accel.x += 1.0;
         }
-
         // @TODO: This is in pixels right now. Don't
         let speed = 50.0;
         accel *= speed;
@@ -72,24 +92,21 @@ impl Game {
         if (accel.x > 0.0 && self.player_dp.x < 0.0) || (accel.x < 0.0 && self.player_dp.x > 0.0) {
             accel.x += accel.x * 0.5; // reactivity percent
         }
-
+        // @BUG: lol no, track if the player is eligable to even jump before jumping
         if input.jump {
             accel.y += 1000.0;
         }
-
         // @TODO: Gravity
         accel.y -= 50.0;
-
         let mut new_p = 0.5 * accel * (dt * dt) + self.player_dp * dt + self.player_p;
         let mut new_dp = accel * dt + self.player_dp;
-
-        if new_p.y < 0.0 {
-            new_p.y = 0.0;
-            new_dp.y = 0.0;
+        // @TODO: Collision Detection
+        if new_p.y < 0.5 {
+            new_p.y = 0.5;
+            new_dp.y = 0.5;
         }
         self.player_dp = new_dp;
         self.player_p = new_p;
-        // @TODO: Collision Detection
         // @TODO: Everything
         self.t += TICK;
     }
@@ -235,11 +252,25 @@ impl Platform {
 
         self.ctx.save();
         // @Q: Why can this fail?
-        // Now we have 0,0 in the center of the screen
-        self.ctx.translate(width / 2.0, height * 5.0 / 6.0)?;
+        // Now we have 0,0 in the bottom left.
+        self.ctx.translate(0.0, height)?;
+
+        // Draw Tiles
+        for (i, tile) in TILE_MAP.iter_mut().enumerate() {
+            let y = i / 32;
+            let x = i % 32;
+            if *tile != 0 {
+                self.ctx.fill_rect(
+                    x as f64 * hts,
+                    -height + (y as f64) * hts,
+                    hts + 1.0,
+                    hts + 1.0,
+                );
+            }
+        }
 
         // Draw Floor
-        self.ctx.fill_rect(-width / 2.0, 0.0, width, 10.0);
+        //self.ctx.fill_rect(-width / 2.0, 0.0, width, 10.0);
 
         // Draw character
         self.ctx.save();
