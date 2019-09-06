@@ -1,3 +1,7 @@
+// I would like to get a native renderer working for this and be able to really debug stuff.
+// canvas is the fastest way to get things drawing though.
+// Maybe just do the c++ + rust thing I had done a while back with imgui.
+
 extern crate nalgebra_glm as glm;
 
 use std::f64;
@@ -9,6 +13,8 @@ mod platform;
 
 use platform::Key;
 
+// For testing
+// bottom left is 0,0
 const TILE_MAP: [u8; 32 * 18] = [
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
@@ -21,12 +27,12 @@ const TILE_MAP: [u8; 32 * 18] = [
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 ];
 
@@ -50,6 +56,7 @@ pub struct Renderer {}
 pub struct Game {
     t: f64, // Game Time
 
+    player_jumped_at: f64,
     player_p: glm::Vec2,
     player_dp: glm::Vec2,
 }
@@ -66,6 +73,7 @@ impl Game {
     pub fn new() -> Self {
         Self {
             t: 0.0,
+            player_jumped_at: 0.0,
             player_p: glm::vec2(1.0, 0.5),
             player_dp: glm::vec2(0.0, 0.0),
         }
@@ -92,15 +100,17 @@ impl Game {
         if (accel.x > 0.0 && self.player_dp.x < 0.0) || (accel.x < 0.0 && self.player_dp.x > 0.0) {
             accel.x += accel.x * 0.5; // reactivity percent
         }
-        // @BUG: lol no, track if the player is eligable to even jump before jumping
-        if input.jump {
+        // @NOTE: Not the way to do this. Probably check landings and stuff.
+        if input.jump && self.t - self.player_jumped_at > 1.0 {
             accel.y += 1000.0;
+            self.player_jumped_at = self.t + (dt as f64);
         }
         // @TODO: Gravity
         accel.y -= 50.0;
         let mut new_p = 0.5 * accel * (dt * dt) + self.player_dp * dt + self.player_p;
         let mut new_dp = accel * dt + self.player_dp;
         // @TODO: Collision Detection
+        // @NOTE: Don't try and do gjk right now, just do aabb collisions and chill.
         if new_p.y < 0.5 {
             new_p.y = 0.5;
             new_dp.y = 0.5;
@@ -239,27 +249,29 @@ impl Platform {
         // half tile size
         let hts = ts / 2.0;
 
-        // assumes we're 16 x 9
+        // Assumes we're 16 x 9
         // @TODO: This is a bad way to check this.
         assert_eq!((aspect_ratio * 100.0) as i64, 177);
 
         self.ctx.clear_rect(0.0, 0.0, width, height);
 
-        // self.ctx.fill_rect(0.0, 0.0, hts, hts);
-        // self.ctx.fill_rect(width - hts, 0.0, hts, hts);
-        // self.ctx.fill_rect(width - hts, height - hts, hts, hts);
-        // self.ctx.fill_rect(0.0, height - hts, hts, hts);
-
         self.ctx.save();
         // @Q: Why can this fail?
         // Now we have 0,0 in the bottom left.
+        // @TODO: This will all depend on the camera or whatever.
         self.ctx.translate(0.0, height)?;
 
         // Draw Tiles
         for (i, tile) in TILE_MAP.iter_mut().enumerate() {
             let y = i / 32;
             let x = i % 32;
-            if *tile != 0 {
+            if *tile > 0 {
+                match tile {
+                    1 => self.ctx.set_fill_style(&JsValue::from_str("brown")),
+                    2 => self.ctx.set_fill_style(&JsValue::from_str("lightgreen")),
+                    3 => self.ctx.set_fill_style(&JsValue::from_str("lightblue")),
+                    _ => self.ctx.set_fill_style(&JsValue::from_str("black")),
+                }
                 self.ctx.fill_rect(
                     x as f64 * hts,
                     -height + (y as f64) * hts,
@@ -268,9 +280,6 @@ impl Platform {
                 );
             }
         }
-
-        // Draw Floor
-        //self.ctx.fill_rect(-width / 2.0, 0.0, width, 10.0);
 
         // Draw character
         self.ctx.save();
@@ -283,7 +292,7 @@ impl Platform {
         self.ctx.begin_path();
         // self.ctx
         //     .arc(0.0, 0.0, hts / 2.0, 0.0, f64::consts::PI * 2.0)?;
-        self.ctx.set_fill_style(&JsValue::from_str("red"));
+        self.ctx.set_fill_style(&JsValue::from_str("green"));
         self.ctx.fill_rect(-hts / 2.0, -ts, hts, ts);
         self.ctx.stroke();
         self.ctx.restore();
@@ -293,6 +302,3 @@ impl Platform {
         Ok(())
     }
 }
-
-// If whole screen is 16x9, dude is like 2 tall.
-// That's a good starting point. prolly not exactly right.
