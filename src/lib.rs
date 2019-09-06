@@ -60,20 +60,33 @@ impl Game {
         if input.right {
             accel.x += 1.0;
         }
+
         // @TODO: This is in pixels right now. Don't
         let speed = 50.0;
         accel *= speed;
         // @TODO: Better friction
-        accel += -5.0 * self.player_dp;
+        accel.x += -5.0 * self.player_dp.x;
         // @NOTE: "reactivity"
         // @TODO: I really need better vectors...
         // this is a dot product or something.
         if (accel.x > 0.0 && self.player_dp.x < 0.0) || (accel.x < 0.0 && self.player_dp.x > 0.0) {
             accel.x += accel.x * 0.5; // reactivity percent
         }
-        // @TODO: Gravity and Jumping
-        let new_p = 0.5 * accel * (dt * dt) + self.player_dp * dt + self.player_p;
-        let new_dp = accel * dt + self.player_dp;
+
+        if input.jump {
+            accel.y += 1000.0;
+        }
+
+        // @TODO: Gravity
+        accel.y -= 50.0;
+
+        let mut new_p = 0.5 * accel * (dt * dt) + self.player_dp * dt + self.player_p;
+        let mut new_dp = accel * dt + self.player_dp;
+
+        if new_p.y < 0.0 {
+            new_p.y = 0.0;
+            new_dp.y = 0.0;
+        }
         self.player_dp = new_dp;
         self.player_p = new_p;
         // @TODO: Collision Detection
@@ -215,15 +228,18 @@ impl Platform {
 
         self.ctx.clear_rect(0.0, 0.0, width, height);
 
-        self.ctx.fill_rect(0.0, 0.0, hts, hts);
-        self.ctx.fill_rect(width - hts, 0.0, hts, hts);
-        self.ctx.fill_rect(width - hts, height - hts, hts, hts);
-        self.ctx.fill_rect(0.0, height - hts, hts, hts);
+        // self.ctx.fill_rect(0.0, 0.0, hts, hts);
+        // self.ctx.fill_rect(width - hts, 0.0, hts, hts);
+        // self.ctx.fill_rect(width - hts, height - hts, hts, hts);
+        // self.ctx.fill_rect(0.0, height - hts, hts, hts);
 
         self.ctx.save();
         // @Q: Why can this fail?
         // Now we have 0,0 in the center of the screen
-        self.ctx.translate(width / 2.0, height / 2.0)?;
+        self.ctx.translate(width / 2.0, height * 5.0 / 6.0)?;
+
+        // Draw Floor
+        self.ctx.fill_rect(-width / 2.0, 0.0, width, 10.0);
 
         // Draw character
         self.ctx.save();
