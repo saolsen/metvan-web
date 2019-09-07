@@ -48,6 +48,7 @@ pub struct Aabb {
     extent: glm::Vec2,
 }
 
+#[derive(Debug)]
 pub enum Geometry {
     AABB { aabb: Aabb },
 }
@@ -60,8 +61,37 @@ pub struct Input {
 }
 
 #[derive(Debug)]
+pub enum Color {
+    Brown,
+    LightGreen,
+    LightBlue,
+    Black,
+    Green,
+    Red,
+}
+
+#[derive(Debug)]
+pub struct RenderRect {
+    world_center: glm::Vec2,
+    world_extent: glm::Vec2,
+    color: Color,
+}
+
+#[derive(Debug)]
 pub struct Renderer {
+    rects: Vec<RenderRect>,
     collision_tiles: Vec<(usize, usize)>,
+}
+
+impl Renderer {
+    // Position is bottom left.
+    fn rect(&mut self, center: glm::Vec2, extent: glm::Vec2, color: Color) {
+        self.rects.push(RenderRect {
+            world_center: center,
+            world_extent: extent,
+            color,
+        });
+    }
 }
 
 #[derive(Debug)]
@@ -174,8 +204,44 @@ impl Game {
 
     pub fn render(&mut self, _dt_left: f64, renderer: &mut Renderer) {
         // @TODO: Return draw lists or something of what to render.
+        renderer.rects.clear();
         renderer.collision_tiles.clear();
         renderer.collision_tiles.extend(&self.collision_tiles);
+
+        // Tilemap
+        for (i, tile) in TILE_MAP.iter_mut().enumerate() {
+            let y = i / 32;
+            let x = i % 32;
+            if *tile > 0 {
+                let mut color = match tile {
+                    1 => Color::Brown,
+                    2 => Color::LightGreen,
+                    3 => Color::LightBlue,
+                    _ => Color::Black,
+                };
+
+                for (colx, coly) in &renderer.collision_tiles {
+                    if *colx == x && *coly == y {
+                        color = Color::Red;
+                    }
+                }
+
+                renderer.rect(
+                    glm::vec2(0.5 * (x as f32 + 1.0), 18.0 - (0.5 * (y as f32 + 1.0))),
+                    glm::vec2(0.5, 0.5),
+                    color,
+                );
+            }
+        }
+
+        // Player
+        // @TODO: Use remaining dt for this.
+        renderer.rect(
+            self.player_p - glm::vec2(0.25, 0.0),
+            glm::vec2(0.5, 1.0),
+            Color::Green,
+        );
+        //renderer.rect(glm::vec2(5.0, 5.0), glm::vec2(1.0, 1.0), Color::Green)
     }
 }
 
@@ -239,6 +305,7 @@ impl Platform {
         };
 
         let renderer = Renderer {
+            rects: vec![],
             collision_tiles: vec![],
         };
 
@@ -316,50 +383,73 @@ impl Platform {
         // @TODO: This will all depend on the camera or whatever.
         self.ctx.translate(0.0, height)?;
 
-        // Draw Tiles
-        for (i, tile) in TILE_MAP.iter_mut().enumerate() {
-            let y = i / 32;
-            let x = i % 32;
-            if *tile > 0 {
-                match tile {
-                    1 => self.ctx.set_fill_style(&JsValue::from_str("brown")),
-                    2 => self.ctx.set_fill_style(&JsValue::from_str("lightgreen")),
-                    3 => self.ctx.set_fill_style(&JsValue::from_str("lightblue")),
-                    _ => self.ctx.set_fill_style(&JsValue::from_str("black")),
-                }
+        for rect in &self.renderer.rects {
+            self.ctx.save();
+            // @TODO: Cache these don't make strings every frame.
+            match &rect.color {
+                Color::Brown => self.ctx.set_fill_style(&JsValue::from_str("brown")),
+                Color::LightGreen => self.ctx.set_fill_style(&JsValue::from_str("lightgreen")),
+                Color::LightBlue => self.ctx.set_fill_style(&JsValue::from_str("lightblue")),
+                Color::Black => self.ctx.set_fill_style(&JsValue::from_str("black")),
+                Color::Green => self.ctx.set_fill_style(&JsValue::from_str("green")),
+                Color::Red => self.ctx.set_fill_style(&JsValue::from_str("red")),
+            };
 
-                for (colx, coly) in &self.renderer.collision_tiles {
-                    if *colx == x && *coly == y {
-                        self.ctx.set_fill_style(&JsValue::from_str("red"))
-                    }
-                }
+            let x = (rect.world_center.x - rect.world_extent.x) as f64 * ts;
+            let y = (rect.world_center.y + rect.world_extent.y) as f64 * ts;
+            let width = (rect.world_extent.x * 2.0) as f64 * ts;
+            let height = (rect.world_extent.y * 2.0) as f64 * ts;
 
-                self.ctx.fill_rect(
-                    x as f64 * hts,
-                    -height + (y as f64) * hts,
-                    hts + 1.0,
-                    hts + 1.0,
-                );
-            }
+            // is it negative y or height - y?
+            self.ctx.fill_rect(x, -y, width, height);
+
+            self.ctx.restore();
         }
 
+        // // Draw Tiles
+        // for (i, tile) in TILE_MAP.iter_mut().enumerate() {
+        //     let y = i / 32;
+        //     let x = i % 32;
+        //     if *tile > 0 {
+        //         match tile {
+        //             1 => self.ctx.set_fill_style(&JsValue::from_str("brown")),
+        //             2 => self.ctx.set_fill_style(&JsValue::from_str("lightgreen")),
+        //             3 => self.ctx.set_fill_style(&JsValue::from_str("lightblue")),
+        //             _ => self.ctx.set_fill_style(&JsValue::from_str("black")),
+        //         }
+
+        //         for (colx, coly) in &self.renderer.collision_tiles {
+        //             if *colx == x && *coly == y {
+        //                 self.ctx.set_fill_style(&JsValue::from_str("red"))
+        //             }
+        //         }
+
+        //         self.ctx.fill_rect(
+        //             x as f64 * hts,
+        //             -height + (y as f64) * hts,
+        //             hts + 1.0,
+        //             hts + 1.0,
+        //         );
+        //     }
+        // }
+
         // Draw character
-        self.ctx.save();
-        self.ctx.translate(
-            self.game.player_p.x as f64 * ts,
-            -self.game.player_p.y as f64 * ts,
-        )?;
+        //self.ctx.save();
+        // self.ctx.translate(
+        //     self.game.player_p.x as f64 * ts,
+        //     -self.game.player_p.y as f64 * ts,
+        // )?;
 
-        self.ctx.set_fill_style(&JsValue::from_str("black"));
-        self.ctx.begin_path();
-        // self.ctx
-        //     .arc(0.0, 0.0, hts / 2.0, 0.0, f64::consts::PI * 2.0)?;
-        self.ctx.set_fill_style(&JsValue::from_str("green"));
-        self.ctx.fill_rect(-hts / 2.0, -ts, hts, ts);
-        self.ctx.stroke();
-        self.ctx.restore();
+        // self.ctx.set_fill_style(&JsValue::from_str("black"));
+        // self.ctx.begin_path();
+        // // self.ctx
+        // //     .arc(0.0, 0.0, hts / 2.0, 0.0, f64::consts::PI * 2.0)?;
+        // self.ctx.set_fill_style(&JsValue::from_str("green"));
+        // self.ctx.fill_rect(-hts / 2.0, -ts, hts, ts);
+        // self.ctx.stroke();
+        // self.ctx.restore();
 
-        self.ctx.restore();
+        //self.ctx.restore();
 
         Ok(())
     }
