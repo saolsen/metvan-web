@@ -43,6 +43,16 @@ macro_rules! console_log {
 }
 
 #[derive(Debug)]
+pub struct Aabb {
+    center: glm::Vec2,
+    extent: glm::Vec2,
+}
+
+pub enum Geometry {
+    AABB { aabb: Aabb },
+}
+
+#[derive(Debug)]
 pub struct Input {
     pub left: bool,
     pub right: bool,
@@ -50,7 +60,9 @@ pub struct Input {
 }
 
 #[derive(Debug)]
-pub struct Renderer {}
+pub struct Renderer {
+    collision_tiles: Vec<(usize, usize)>,
+}
 
 #[derive(Debug)]
 pub struct Game {
@@ -59,6 +71,8 @@ pub struct Game {
     player_jumped_at: f64,
     player_p: glm::Vec2,
     player_dp: glm::Vec2,
+
+    collision_tiles: Vec<(usize, usize)>,
 }
 
 // How can we figure out the physics numbers.
@@ -76,11 +90,14 @@ impl Game {
             player_jumped_at: 0.0,
             player_p: glm::vec2(1.0, 0.5),
             player_dp: glm::vec2(0.0, 0.0),
+            collision_tiles: vec![],
         }
     }
 
     pub fn update(&mut self, input: &Input) {
         let dt = 1.0 / 60.0;
+        self.collision_tiles.clear();
+
         // What we want are rigid body dynamics.
         let mut accel = glm::vec2(0.0, 0.0);
         if input.left {
@@ -108,6 +125,40 @@ impl Game {
         // @TODO: Gravity
         accel.y -= 50.0;
         let mut new_p = 0.5 * accel * (dt * dt) + self.player_dp * dt + self.player_p;
+        let movement = new_p - self.player_p;
+        // See if we collide with anything over that movement.
+
+        let player_geometry = Aabb {
+            center: self.player_p + glm::vec2(0.0, 0.5),
+            extent: glm::vec2(0.25, 0.5),
+        };
+
+        for (i, tile) in TILE_MAP.iter_mut().enumerate() {
+            let y = (i / 32) as f32;
+            let x = (i % 32) as f32;
+            if *tile > 0 {
+                let tile_geometry = Aabb {
+                    center: glm::vec2(x + 0.25, y + 0.25),
+                    extent: glm::vec2(0.25, 0.25),
+                };
+
+                let a = &player_geometry;
+                let b = &tile_geometry;
+                let collides = if ((a.center.x - b.center.x).abs() > (a.extent.x + b.extent.x))
+                    || ((a.center.y - b.center.y).abs() > (a.extent.y + b.extent.y))
+                {
+                    false
+                } else {
+                    true
+                };
+
+                if collides {
+                    self.collision_tiles.push((x as usize, y as usize));
+                    //console_log!("collision: ({},{})", x, y);
+                }
+            }
+        }
+
         let mut new_dp = accel * dt + self.player_dp;
         // @TODO: Collision Detection
         // @NOTE: Don't try and do gjk right now, just do aabb collisions and chill.
@@ -121,8 +172,10 @@ impl Game {
         self.t += TICK;
     }
 
-    pub fn render(&mut self, _dt_left: f64, _renderer: &mut Renderer) {
+    pub fn render(&mut self, _dt_left: f64, renderer: &mut Renderer) {
         // @TODO: Return draw lists or something of what to render.
+        renderer.collision_tiles.clear();
+        renderer.collision_tiles.extend(&self.collision_tiles);
     }
 }
 
@@ -185,7 +238,9 @@ impl Platform {
             jump: false,
         };
 
-        let renderer = Renderer {};
+        let renderer = Renderer {
+            collision_tiles: vec![],
+        };
 
         Ok(Self {
             dpr,
@@ -272,6 +327,13 @@ impl Platform {
                     3 => self.ctx.set_fill_style(&JsValue::from_str("lightblue")),
                     _ => self.ctx.set_fill_style(&JsValue::from_str("black")),
                 }
+
+                for (colx, coly) in &self.renderer.collision_tiles {
+                    if *colx == x && *coly == y {
+                        self.ctx.set_fill_style(&JsValue::from_str("red"))
+                    }
+                }
+
                 self.ctx.fill_rect(
                     x as f64 * hts,
                     -height + (y as f64) * hts,
