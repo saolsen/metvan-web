@@ -118,7 +118,7 @@ impl Game {
         Self {
             t: 0.0,
             player_jumped_at: 0.0,
-            player_p: glm::vec2(1.0, 0.5),
+            player_p: glm::vec2(2.0, 1.0),
             player_dp: glm::vec2(0.0, 0.0),
             collision_tiles: vec![],
         }
@@ -159,8 +159,8 @@ impl Game {
         // See if we collide with anything over that movement.
 
         let player_geometry = Aabb {
-            center: self.player_p + glm::vec2(0.0, 0.5),
-            extent: glm::vec2(0.25, 0.5),
+            center: self.player_p + glm::vec2(0.0, 1.0 - 0.01),
+            extent: glm::vec2(0.5, 1.0 - 0.02),
         };
 
         for (i, tile) in TILE_MAP.iter_mut().enumerate() {
@@ -168,8 +168,8 @@ impl Game {
             let x = (i % 32) as f32;
             if *tile > 0 {
                 let tile_geometry = Aabb {
-                    center: glm::vec2(x + 0.25, y + 0.25),
-                    extent: glm::vec2(0.25, 0.25),
+                    center: glm::vec2(x as f32 + 0.5, 18.0 - (y as f32 + 0.5)),
+                    extent: glm::vec2(0.5, 0.5),
                 };
 
                 let a = &player_geometry;
@@ -192,9 +192,9 @@ impl Game {
         let mut new_dp = accel * dt + self.player_dp;
         // @TODO: Collision Detection
         // @NOTE: Don't try and do gjk right now, just do aabb collisions and chill.
-        if new_p.y < 0.5 {
-            new_p.y = 0.5;
-            new_dp.y = 0.5;
+        if new_p.y < 1.0 {
+            new_p.y = 1.0;
+            new_dp.y = 0.0;
         }
         self.player_dp = new_dp;
         self.player_p = new_p;
@@ -227,7 +227,7 @@ impl Game {
                 }
 
                 renderer.rect(
-                    glm::vec2(0.5 * (x as f32 + 1.0), 18.0 - (0.5 * (y as f32 + 1.0))),
+                    glm::vec2(x as f32 + 0.5, 18.0 - (y as f32 + 0.5)),
                     glm::vec2(0.5, 0.5),
                     color,
                 );
@@ -236,12 +236,12 @@ impl Game {
 
         // Player
         // @TODO: Use remaining dt for this.
+        //console_log!("player: ({},{})", self.player_p.x, self.player_p.y);
         renderer.rect(
-            self.player_p - glm::vec2(0.25, 0.0),
+            self.player_p + glm::vec2(0.0, 1.0),
             glm::vec2(0.5, 1.0),
             Color::Green,
         );
-        //renderer.rect(glm::vec2(5.0, 5.0), glm::vec2(1.0, 1.0), Color::Green)
     }
 }
 
@@ -350,8 +350,6 @@ impl Platform {
         // Use that to interpolate stuff when rendering.
         self.game.render(dt, &mut self.renderer);
 
-        // @TODO: Gravity!
-
         let display_width = self.canvas.client_width() as u32 * self.dpr as u32;
         let display_height = self.canvas.client_height() as u32 * self.dpr as u32;
 
@@ -367,9 +365,9 @@ impl Platform {
         let aspect_ratio = width / height;
 
         // tile size
-        let ts = width / 16.0;
+        let ts = width / 32.0;
         // half tile size
-        let hts = ts / 2.0;
+        //let hts = ts / 2.0;
 
         // Assumes we're 16 x 9
         // @TODO: This is a bad way to check this.
@@ -400,56 +398,12 @@ impl Platform {
             let width = (rect.world_extent.x * 2.0) as f64 * ts;
             let height = (rect.world_extent.y * 2.0) as f64 * ts;
 
-            // is it negative y or height - y?
             self.ctx.fill_rect(x, -y, width, height);
 
             self.ctx.restore();
         }
 
-        // // Draw Tiles
-        // for (i, tile) in TILE_MAP.iter_mut().enumerate() {
-        //     let y = i / 32;
-        //     let x = i % 32;
-        //     if *tile > 0 {
-        //         match tile {
-        //             1 => self.ctx.set_fill_style(&JsValue::from_str("brown")),
-        //             2 => self.ctx.set_fill_style(&JsValue::from_str("lightgreen")),
-        //             3 => self.ctx.set_fill_style(&JsValue::from_str("lightblue")),
-        //             _ => self.ctx.set_fill_style(&JsValue::from_str("black")),
-        //         }
-
-        //         for (colx, coly) in &self.renderer.collision_tiles {
-        //             if *colx == x && *coly == y {
-        //                 self.ctx.set_fill_style(&JsValue::from_str("red"))
-        //             }
-        //         }
-
-        //         self.ctx.fill_rect(
-        //             x as f64 * hts,
-        //             -height + (y as f64) * hts,
-        //             hts + 1.0,
-        //             hts + 1.0,
-        //         );
-        //     }
-        // }
-
-        // Draw character
-        //self.ctx.save();
-        // self.ctx.translate(
-        //     self.game.player_p.x as f64 * ts,
-        //     -self.game.player_p.y as f64 * ts,
-        // )?;
-
-        // self.ctx.set_fill_style(&JsValue::from_str("black"));
-        // self.ctx.begin_path();
-        // // self.ctx
-        // //     .arc(0.0, 0.0, hts / 2.0, 0.0, f64::consts::PI * 2.0)?;
-        // self.ctx.set_fill_style(&JsValue::from_str("green"));
-        // self.ctx.fill_rect(-hts / 2.0, -ts, hts, ts);
-        // self.ctx.stroke();
-        // self.ctx.restore();
-
-        //self.ctx.restore();
+        self.ctx.restore();
 
         Ok(())
     }
