@@ -23,9 +23,9 @@ const TILE_MAP: [u8; 32 * 18] = [
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
@@ -155,14 +155,13 @@ impl Game {
         // @TODO: Gravity
         accel.y -= 50.0;
         let mut new_p = 0.5 * accel * (dt * dt) + self.player_dp * dt + self.player_p;
-        let movement = new_p - self.player_p;
-        // See if we collide with anything over that movement.
 
         let player_geometry = Aabb {
             center: self.player_p + glm::vec2(0.0, 1.0 - 0.01),
             extent: glm::vec2(0.5, 1.0 - 0.02),
         };
 
+        // @NOTE: Just checking for collisions.
         for (i, tile) in TILE_MAP.iter_mut().enumerate() {
             let y = (i / 32) as f32;
             let x = (i % 32) as f32;
@@ -187,6 +186,35 @@ impl Game {
                     //console_log!("collision: ({},{})", x, y);
                 }
             }
+        }
+
+        // How does this algorithm work? It's a raycast of my position against the tiles,
+        // but it's actually a minkowski sum thing becuase I'm an aabb too. Then I want to
+        // know the hit normal and the point on the ray that hits because I will
+        // move that far and cancel out the motion perpendicular to the normal or whatever
+        // but then keep going. We'll use the center of the aabb, not the position because
+        // that's how the math will work out with minkowski sums.
+
+        let movement = (new_p - self.player_p).normalize();
+
+        // @Q: Do I do this math in dt or in 0-1?
+        let mut dt_remaining = 1.0;
+        while dt_remaining > 0.0 {
+            for (i, tile) in TILE_MAP.iter_mut().enumerate() {
+                let y = (i / 32) as f32;
+                let x = (i % 32) as f32;
+                if *tile > 0 {
+                    let tile_geometry = Aabb {
+                        center: glm::vec2(x as f32 + 0.5, 18.0 - (y as f32 + 0.5)),
+                        extent: glm::vec2(0.5, 0.5),
+                    };
+
+                    //@TODO
+                    // Raycast, move as far as we can, update movement vector and cancel out
+                    // velocity on collisions.
+                }
+            }
+            dt_remaining = 0.0;
         }
 
         let mut new_dp = accel * dt + self.player_dp;
