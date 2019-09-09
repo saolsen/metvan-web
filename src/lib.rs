@@ -182,7 +182,7 @@ impl Game {
                 };
 
                 if collides {
-                    self.collision_tiles.push((x as usize, y as usize));
+                    //self.collision_tiles.push((x as usize, y as usize));
                     //console_log!("collision: ({},{})", x, y);
                 }
             }
@@ -195,27 +195,53 @@ impl Game {
         // but then keep going. We'll use the center of the aabb, not the position because
         // that's how the math will work out with minkowski sums.
 
-        let movement = (new_p - self.player_p).normalize();
-
         // @Q: Do I do this math in dt or in 0-1?
-        let mut dt_remaining = 1.0;
-        while dt_remaining > 0.0 {
-            for (i, tile) in TILE_MAP.iter_mut().enumerate() {
-                let y = (i / 32) as f32;
-                let x = (i % 32) as f32;
-                if *tile > 0 {
-                    let tile_geometry = Aabb {
-                        center: glm::vec2(x as f32 + 0.5, 18.0 - (y as f32 + 0.5)),
-                        extent: glm::vec2(0.5, 0.5),
-                    };
+        //if new_p - self.player_p != glm::vec2(0.0, 0.0) {
+            let mut dt_remaining = 1.0;
 
-                    //@TODO
-                    // Raycast, move as far as we can, update movement vector and cancel out
-                    // velocity on collisions.
+            let ray_o = self.player_p; // origin
+            let ray_d = (new_p - self.player_p).normalize(); // direction
+            while dt_remaining > 0.0 {
+                for (i, tile) in TILE_MAP.iter_mut().enumerate() {
+                    let y = (i / 32) as f32;
+                    let x = (i % 32) as f32;
+                    if *tile > 0 {
+                        let tile_geometry = Aabb {
+                            center: glm::vec2(x as f32 + 0.5, 18.0 - (y as f32 + 0.5)),
+                            extent: glm::vec2(0.5, 0.5),
+                        };
+                        let bmin_x = tile_geometry.center.x - tile_geometry.extent.x;
+                        let bmax_x = tile_geometry.center.x + tile_geometry.extent.x;
+                        let bmin_y = tile_geometry.center.y - tile_geometry.extent.y;
+                        let bmax_y = tile_geometry.center.y + tile_geometry.extent.y;
+
+                        let mut tmin = std::f32::NEG_INFINITY;
+                        let mut tmax = std::f32::INFINITY;
+
+                        if ray_d.x != 0.0 {
+                            let tx1 = (bmin_x - ray_o.x) / ray_d.x;
+                            let tx2 = (bmax_x - ray_o.x) / ray_d.x;
+
+                            tmin = f32::max(tmin, f32::min(tx1, tx2));
+                            tmax = f32::min(tmax, f32::max(tx1, tx2));
+                        }
+
+                        if ray_d.y != 0.0 {
+                            let ty1 = (bmin_y - ray_o.y) / ray_d.y;
+                            let ty2 = (bmax_y - ray_o.y) / ray_d.y;
+
+                            tmin = f32::max(tmin, f32::min(ty1, ty2));
+                            tmax = f32::min(tmax, f32::max(ty1, ty2));
+                        }
+
+                        if tmax >= tmin {
+                            self.collision_tiles.push((x as usize, y as usize));
+                        }
+                    }
                 }
+                dt_remaining = 0.0;
             }
-            dt_remaining = 0.0;
-        }
+        //}
 
         let mut new_dp = accel * dt + self.player_dp;
         // @TODO: Collision Detection
