@@ -242,16 +242,17 @@ impl Game {
 
                         tmin = f32::max(tmin, f32::min(tx1, tx2));
                         tmax = f32::min(tmax, f32::max(tx1, tx2));
+                    } else if ray_o.x <= bmin_x || ray_o.x >= bmax_x {
+                        continue; // return false.
                     }
-
-                    // if the x component is 0, we're only checking the top and bottom planes which
-                    // is why we get everything
                     if ray_d.y != 0.0 {
                         let ty1 = (bmin_y - ray_o.y) / ray_d.y;
                         let ty2 = (bmax_y - ray_o.y) / ray_d.y;
 
                         tmin = f32::max(tmin, f32::min(ty1, ty2));
                         tmax = f32::min(tmax, f32::max(ty1, ty2));
+                    } else if ray_o.y <= bmin_y || ray_o.y >= bmax_y {
+                        continue; // return false.
                     }
 
                     if tmax >= tmin {
