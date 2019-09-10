@@ -60,6 +60,8 @@ pub enum Geometry {
 
 #[derive(Debug)]
 pub struct Input {
+    pub up: bool,
+    pub down: bool,
     pub left: bool,
     pub right: bool,
     pub jump: bool,
@@ -125,7 +127,7 @@ impl Game {
         Self {
             t: 0.0,
             player_jumped_at: 0.0,
-            player_p: glm::vec2(2.0, 1.0),
+            player_p: glm::vec2(5.1, 5.1),
             player_dp: glm::vec2(0.0, 0.0),
             collision_tiles: vec![],
             debug_ray: glm::vec2(0.0, 0.0),
@@ -144,8 +146,14 @@ impl Game {
         if input.right {
             accel.x += 1.0;
         }
+        if input.up {
+            accel.y += 1.0;
+        }
+        if input.down {
+            accel.y -= 1.0;
+        }
         // @TODO: This is in pixels right now. Don't
-        let speed = 50.0;
+        let speed = 5.0;
         accel *= speed;
         // @TODO: Better friction
         accel.x += -5.0 * self.player_dp.x;
@@ -156,12 +164,15 @@ impl Game {
             accel.x += accel.x * 0.5; // reactivity percent
         }
         // @NOTE: Not the way to do this. Probably check landings and stuff.
-        if input.jump && self.t - self.player_jumped_at > 1.0 {
-            accel.y += 1000.0;
+        // if input.jump && self.t - self.player_jumped_at > 1.0 {
+        if input.jump {
+            accel.y += 10.0;
             self.player_jumped_at = self.t + (dt as f64);
         }
         // @TODO: Gravity
-        accel.y -= 50.0;
+        //accel.y -= 0.1;
+
+        let mut new_dp = accel * dt + self.player_dp;
 
         let player_geometry = Aabb {
             center: self.player_p + glm::vec2(0.0, 1.0 - 0.01),
@@ -207,7 +218,11 @@ impl Game {
         let mut dt_remaining = 1.0;
         let mut ray_o = self.player_p; // origin
         let mut new_p = 0.5 * accel * (dt * dt) + self.player_dp * dt + self.player_p;
-        let mut ray_d = (new_p - ray_o).normalize(); // direction
+        let mut ray_d = new_p - ray_o;
+        if ray_d.magnitude() > 0.0 {
+            ray_d = ray_d.normalize();
+        }
+        let mut hit_plane = glm::vec2(0.0, 0.0);
 
         //assert_eq!(ray_o + ray_d * dt_remaining, new_p);
 
@@ -226,9 +241,13 @@ impl Game {
                     // @OPTIMIZATION: You can do a version of this without the branches.
                     // see https://tavianator.com/fast-branchless-raybounding-box-intersections-part-2-nans/
 
-                    let bmin_x = tile_geometry.center.x - tile_geometry.extent.x;
-                    let bmax_x = tile_geometry.center.x + tile_geometry.extent.x;
-                    let bmin_y = tile_geometry.center.y - tile_geometry.extent.y;
+                    let bmin_x =
+                        tile_geometry.center.x - tile_geometry.extent.x - player_geometry.extent.x;
+                    let bmax_x =
+                        tile_geometry.center.x + tile_geometry.extent.x + player_geometry.extent.x;
+                    let bmin_y = tile_geometry.center.y
+                        - tile_geometry.extent.y
+                        - player_geometry.extent.y * 2.0;
                     let bmax_y = tile_geometry.center.y + tile_geometry.extent.y;
 
                     let mut tmin = std::f32::NEG_INFINITY;
@@ -238,8 +257,17 @@ impl Game {
                         let tx1 = (bmin_x - ray_o.x) / ray_d.x;
                         let tx2 = (bmax_x - ray_o.x) / ray_d.x;
 
-                        tmin = f32::max(tmin, f32::min(tx1, tx2));
-                        tmax = f32::min(tmax, f32::max(tx1, tx2));
+                        let min_x = f32::min(tx1, tx2);
+                        if min_x > tmin {
+                            tmin = min_x;
+                            hit_plane = glm::vec2(1.0, 0.0);
+                        }
+                        let max_x = f32::max(tx1, tx2);
+                        if max_x < tmax {
+                            tmax = max_x;
+                        }
+                    //tmin = f32::max(tmin, f32::min(tx1, tx2));
+                    //tmax = f32::min(tmax, f32::max(tx1, tx2));
                     } else if ray_o.x <= bmin_x || ray_o.x >= bmax_x {
                         continue 'tiles; // return false.
                     }
@@ -247,8 +275,17 @@ impl Game {
                         let ty1 = (bmin_y - ray_o.y) / ray_d.y;
                         let ty2 = (bmax_y - ray_o.y) / ray_d.y;
 
-                        tmin = f32::max(tmin, f32::min(ty1, ty2));
-                        tmax = f32::min(tmax, f32::max(ty1, ty2));
+                        let min_y = f32::min(ty1, ty2);
+                        if min_y > tmin {
+                            tmin = min_y;
+                            hit_plane = glm::vec2(0.0, 1.0);
+                        }
+                        let max_y = f32::max(ty1, ty2);
+                        if max_y < tmax {
+                            tmax = max_y;
+                        }
+                    // tmin = f32::max(tmin, f32::min(ty1, ty2));
+                    // tmax = f32::min(tmax, f32::max(ty1, ty2));
                     } else if ray_o.y <= bmin_y || ray_o.y >= bmax_y {
                         continue 'tiles; // return false.
                     }
@@ -262,11 +299,15 @@ impl Game {
                             self.collision_tiles.push((x as usize, y as usize));
 
                             dt_remaining -= tmin;
-                            ray_o += ray_d * tmin;
-                            break 'time; // @TODO only break tiles. Keep moving and stuff.
-                                         // @TODO: subtract out the component of the ray that's collided.
-                                         //let mut new_p = 0.5 * accel * (dt * dt) + self.player_dp * dt + self.player_p;
-                                         //let mut ray_d = (new_p - ray_o).normalize(); // direction
+                            ray_o += ray_d * (tmin - 0.1);
+                            if hit_plane.x == 1.0 {
+                                ray_d.x = 0.0;
+                                new_dp.x = 0.0;
+                            } else if hit_plane.y == 1.0 {
+                                ray_d.y = 0.0;
+                                new_dp.y = 0.0;
+                            }
+                            break 'tiles;
                         }
                     }
                 }
@@ -275,13 +316,9 @@ impl Game {
             new_p = ray_o + ray_d * dt_remaining;
             break;
         }
-        //}
-
-        let mut new_dp = accel * dt + self.player_dp;
-        // @TODO: Collision Detection
-        // @NOTE: Don't try and do gjk right now, just do aabb collisions and chill.
-        if new_p.y < 1.0 {
-            new_p.y = 1.0;
+        if hit_plane.x == 1.0 {
+            new_dp.x = 0.0;
+        } else if hit_plane.y == 1.0 {
             new_dp.y = 0.0;
         }
         self.player_dp = new_dp;
@@ -291,6 +328,7 @@ impl Game {
     }
 
     pub fn render(&mut self, _dt_left: f64, renderer: &mut Renderer) {
+        console_log!("{:?}", self.player_p);
         // @TODO: Return draw lists or something of what to render.
         renderer.rects.clear();
         renderer.collision_tiles.clear();
@@ -389,6 +427,8 @@ impl Platform {
 
         let input = Input {
             //@TODO: Input handling is more subdle than this.
+            up: false,
+            down: false,
             left: false,
             right: false,
             jump: false,
@@ -415,6 +455,8 @@ impl Platform {
     pub fn onkey(&mut self, key: u32, pressed: bool) {
         let key: Key = key.into();
         match key {
+            Key::W => self.input.up = pressed,
+            Key::S => self.input.down = pressed,
             Key::A => self.input.left = pressed,
             Key::D => self.input.right = pressed,
             Key::Space => {
