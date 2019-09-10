@@ -207,15 +207,6 @@ impl Game {
 
         self.debug_ray = glm::vec2(ray_d.x, ray_d.y);
 
-        console_log!(
-            "ray: ({},{}), ({},{}), {}",
-            ray_o.x,
-            ray_o.y,
-            ray_d.x,
-            ray_d.y,
-            ray_d.x == 0.0
-        );
-
         while dt_remaining > 0.0 {
             for (i, tile) in TILE_MAP.iter_mut().enumerate() {
                 let y = (i / 32) as f32;
@@ -226,7 +217,8 @@ impl Game {
                         extent: glm::vec2(0.5, 0.5),
                     };
 
-                    // @BUG: When the x part of the ray is 0, this is hitting everything!
+                    // @OPTIMIZATION: You can do a version of this without the branches.
+                    // see https://tavianator.com/fast-branchless-raybounding-box-intersections-part-2-nans/
 
                     let bmin_x = tile_geometry.center.x - tile_geometry.extent.x;
                     let bmax_x = tile_geometry.center.x + tile_geometry.extent.x;
@@ -256,6 +248,9 @@ impl Game {
                     }
 
                     if tmax >= tmin {
+                        // @TODO
+                        // We need the hit time and the normal of the hit, then we can
+                        // update our position, cancel our some movement and keep going.
                         if tmin >= 0.0 && tmin < 10.0 {
                             self.collision_tiles.push((x as usize, y as usize));
                         }
