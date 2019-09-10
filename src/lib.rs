@@ -81,6 +81,7 @@ pub struct RenderRect {
 pub struct Renderer {
     rects: Vec<RenderRect>,
     collision_tiles: Vec<(usize, usize)>,
+    debug_ray: glm::Vec2,
 }
 
 impl Renderer {
@@ -103,6 +104,7 @@ pub struct Game {
     player_dp: glm::Vec2,
 
     collision_tiles: Vec<(usize, usize)>,
+    debug_ray: glm::Vec2,
 }
 
 // How can we figure out the physics numbers.
@@ -121,6 +123,7 @@ impl Game {
             player_p: glm::vec2(2.0, 1.0),
             player_dp: glm::vec2(0.0, 0.0),
             collision_tiles: vec![],
+            debug_ray: glm::vec2(0.0, 0.0),
         }
     }
 
@@ -197,50 +200,69 @@ impl Game {
 
         // @Q: Do I do this math in dt or in 0-1?
         //if new_p - self.player_p != glm::vec2(0.0, 0.0) {
-            let mut dt_remaining = 1.0;
+        let mut dt_remaining = 1.0;
 
-            let ray_o = self.player_p; // origin
-            let ray_d = (new_p - self.player_p).normalize(); // direction
-            while dt_remaining > 0.0 {
-                for (i, tile) in TILE_MAP.iter_mut().enumerate() {
-                    let y = (i / 32) as f32;
-                    let x = (i % 32) as f32;
-                    if *tile > 0 {
-                        let tile_geometry = Aabb {
-                            center: glm::vec2(x as f32 + 0.5, 18.0 - (y as f32 + 0.5)),
-                            extent: glm::vec2(0.5, 0.5),
-                        };
-                        let bmin_x = tile_geometry.center.x - tile_geometry.extent.x;
-                        let bmax_x = tile_geometry.center.x + tile_geometry.extent.x;
-                        let bmin_y = tile_geometry.center.y - tile_geometry.extent.y;
-                        let bmax_y = tile_geometry.center.y + tile_geometry.extent.y;
+        let ray_o = self.player_p; // origin
+        let ray_d = (new_p - self.player_p).normalize(); // direction
 
-                        let mut tmin = std::f32::NEG_INFINITY;
-                        let mut tmax = std::f32::INFINITY;
+        self.debug_ray = glm::vec2(ray_d.x, ray_d.y);
 
-                        if ray_d.x != 0.0 {
-                            let tx1 = (bmin_x - ray_o.x) / ray_d.x;
-                            let tx2 = (bmax_x - ray_o.x) / ray_d.x;
+        console_log!(
+            "ray: ({},{}), ({},{}), {}",
+            ray_o.x,
+            ray_o.y,
+            ray_d.x,
+            ray_d.y,
+            ray_d.x == 0.0
+        );
 
-                            tmin = f32::max(tmin, f32::min(tx1, tx2));
-                            tmax = f32::min(tmax, f32::max(tx1, tx2));
-                        }
+        while dt_remaining > 0.0 {
+            for (i, tile) in TILE_MAP.iter_mut().enumerate() {
+                let y = (i / 32) as f32;
+                let x = (i % 32) as f32;
+                if *tile > 0 {
+                    let tile_geometry = Aabb {
+                        center: glm::vec2(x as f32 + 0.5, 18.0 - (y as f32 + 0.5)),
+                        extent: glm::vec2(0.5, 0.5),
+                    };
 
-                        if ray_d.y != 0.0 {
-                            let ty1 = (bmin_y - ray_o.y) / ray_d.y;
-                            let ty2 = (bmax_y - ray_o.y) / ray_d.y;
+                    // @BUG: When the x part of the ray is 0, this is hitting everything!
 
-                            tmin = f32::max(tmin, f32::min(ty1, ty2));
-                            tmax = f32::min(tmax, f32::max(ty1, ty2));
-                        }
+                    let bmin_x = tile_geometry.center.x - tile_geometry.extent.x;
+                    let bmax_x = tile_geometry.center.x + tile_geometry.extent.x;
+                    let bmin_y = tile_geometry.center.y - tile_geometry.extent.y;
+                    let bmax_y = tile_geometry.center.y + tile_geometry.extent.y;
 
-                        if tmax >= tmin {
+                    let mut tmin = std::f32::NEG_INFINITY;
+                    let mut tmax = std::f32::INFINITY;
+
+                    if ray_d.x != 0.0 {
+                        let tx1 = (bmin_x - ray_o.x) / ray_d.x;
+                        let tx2 = (bmax_x - ray_o.x) / ray_d.x;
+
+                        tmin = f32::max(tmin, f32::min(tx1, tx2));
+                        tmax = f32::min(tmax, f32::max(tx1, tx2));
+                    }
+
+                    // if the x component is 0, we're only checking the top and bottom planes which
+                    // is why we get everything
+                    if ray_d.y != 0.0 {
+                        let ty1 = (bmin_y - ray_o.y) / ray_d.y;
+                        let ty2 = (bmax_y - ray_o.y) / ray_d.y;
+
+                        tmin = f32::max(tmin, f32::min(ty1, ty2));
+                        tmax = f32::min(tmax, f32::max(ty1, ty2));
+                    }
+
+                    if tmax >= tmin {
+                        if tmin >= 0.0 && tmin < 10.0 {
                             self.collision_tiles.push((x as usize, y as usize));
                         }
                     }
                 }
-                dt_remaining = 0.0;
             }
+            dt_remaining = 0.0;
+        }
         //}
 
         let mut new_dp = accel * dt + self.player_dp;
@@ -261,6 +283,8 @@ impl Game {
         renderer.rects.clear();
         renderer.collision_tiles.clear();
         renderer.collision_tiles.extend(&self.collision_tiles);
+
+        renderer.debug_ray = self.debug_ray;
 
         // Tilemap
         for (i, tile) in TILE_MAP.iter_mut().enumerate() {
@@ -361,6 +385,7 @@ impl Platform {
         let renderer = Renderer {
             rects: vec![],
             collision_tiles: vec![],
+            debug_ray: glm::vec2(0.0, 0.0),
         };
 
         Ok(Self {
