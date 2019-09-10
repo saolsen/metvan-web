@@ -1,8 +1,13 @@
-// I would like to get a native renderer working for this and be able to really debug stuff.
-// canvas is the fastest way to get things drawing though.
-// Maybe just do the c++ + rust thing I had done a while back with imgui.
+// Next Steps
+// Use the raycast collision detection for actual movement updates.
+// Figure out where we intersect so I can manage the velocity.
+// minkowski sums so we're having the whole player geometry hit.
+// use extra dt on render
+// better jump code
 
-extern crate nalgebra_glm as glm;
+// I will probably go full vector graphics world with minkowski but this part is the same either way.
+
+extern crate nalgebra_glm as glm; // @TODO: Probably just write this ourselves.
 
 use std::f64;
 use wasm_bindgen::prelude::*;
@@ -157,7 +162,6 @@ impl Game {
         }
         // @TODO: Gravity
         accel.y -= 50.0;
-        let mut new_p = 0.5 * accel * (dt * dt) + self.player_dp * dt + self.player_p;
 
         let player_geometry = Aabb {
             center: self.player_p + glm::vec2(0.0, 1.0 - 0.01),
@@ -201,14 +205,16 @@ impl Game {
         // @Q: Do I do this math in dt or in 0-1?
         //if new_p - self.player_p != glm::vec2(0.0, 0.0) {
         let mut dt_remaining = 1.0;
+        let mut ray_o = self.player_p; // origin
+        let mut new_p = 0.5 * accel * (dt * dt) + self.player_dp * dt + self.player_p;
+        let mut ray_d = (new_p - ray_o).normalize(); // direction
 
-        let ray_o = self.player_p; // origin
-        let ray_d = (new_p - self.player_p).normalize(); // direction
+        //assert_eq!(ray_o + ray_d * dt_remaining, new_p);
 
         self.debug_ray = glm::vec2(ray_d.x, ray_d.y);
 
-        while dt_remaining > 0.0 {
-            for (i, tile) in TILE_MAP.iter_mut().enumerate() {
+        'time: while dt_remaining > 0.0 {
+            'tiles: for (i, tile) in TILE_MAP.iter_mut().enumerate() {
                 let y = (i / 32) as f32;
                 let x = (i % 32) as f32;
                 if *tile > 0 {
@@ -235,7 +241,7 @@ impl Game {
                         tmin = f32::max(tmin, f32::min(tx1, tx2));
                         tmax = f32::min(tmax, f32::max(tx1, tx2));
                     } else if ray_o.x <= bmin_x || ray_o.x >= bmax_x {
-                        continue; // return false.
+                        continue 'tiles; // return false.
                     }
                     if ray_d.y != 0.0 {
                         let ty1 = (bmin_y - ray_o.y) / ray_d.y;
@@ -244,20 +250,30 @@ impl Game {
                         tmin = f32::max(tmin, f32::min(ty1, ty2));
                         tmax = f32::min(tmax, f32::max(ty1, ty2));
                     } else if ray_o.y <= bmin_y || ray_o.y >= bmax_y {
-                        continue; // return false.
+                        continue 'tiles; // return false.
                     }
 
                     if tmax >= tmin {
                         // @TODO
                         // We need the hit time and the normal of the hit, then we can
                         // update our position, cancel our some movement and keep going.
-                        if tmin >= 0.0 && tmin < 10.0 {
+                        if tmin >= 0.0 && tmin < 1.0 {
+                            // We hit this thing at time tmin.
                             self.collision_tiles.push((x as usize, y as usize));
+
+                            dt_remaining -= tmin;
+                            ray_o += ray_d * tmin;
+                            break 'time; // @TODO only break tiles. Keep moving and stuff.
+                                         // @TODO: subtract out the component of the ray that's collided.
+                                         //let mut new_p = 0.5 * accel * (dt * dt) + self.player_dp * dt + self.player_p;
+                                         //let mut ray_d = (new_p - ray_o).normalize(); // direction
                         }
                     }
                 }
             }
-            dt_remaining = 0.0;
+            // No collisions happened.
+            new_p = ray_o + ray_d * dt_remaining;
+            break;
         }
         //}
 
