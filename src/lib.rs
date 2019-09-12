@@ -152,16 +152,18 @@ impl Game {
         if input.down {
             accel.y -= 1.0;
         }
-        // @TODO: This is in pixels right now. Don't
-        let speed = 5.0;
+        if accel.magnitude() > 0.0 {
+            accel = accel.normalize();
+        }
+        let speed = 1000.0;
         accel *= speed;
         // @TODO: Better friction
-        accel.x += -5.0 * self.player_dp.x;
+        //accel.x += -5.0 * self.player_dp.x;
         // @NOTE: "reactivity"
         // @TODO: I really need better vectors...
         // this is a dot product or something.
         if (accel.x > 0.0 && self.player_dp.x < 0.0) || (accel.x < 0.0 && self.player_dp.x > 0.0) {
-            accel.x += accel.x * 0.5; // reactivity percent
+            //accel.x += accel.x * 0.5; // reactivity percent
         }
         // @NOTE: Not the way to do this. Probably check landings and stuff.
         // if input.jump && self.t - self.player_jumped_at > 1.0 {
@@ -215,12 +217,13 @@ impl Game {
 
         // @Q: Do I do this math in dt or in 0-1?
         //if new_p - self.player_p != glm::vec2(0.0, 0.0) {
-        let mut dt_remaining = 1.0;
+        let mut dt_remaining = dt;
         let mut ray_o = self.player_p; // origin
         let mut new_p = 0.5 * accel * (dt * dt) + self.player_dp * dt + self.player_p;
-        let mut ray_d = new_p - ray_o;
+        let mut ray_d = new_p - ray_o; // maybe / dt_remaining
         if ray_d.magnitude() > 0.0 {
-            ray_d = ray_d.normalize();
+            let magnitude = ray_d.magnitude() / dt_remaining;
+            ray_d = ray_d.normalize() * magnitude;
         }
         let mut hit_plane = glm::vec2(0.0, 0.0);
 
@@ -294,7 +297,7 @@ impl Game {
                         // @TODO
                         // We need the hit time and the normal of the hit, then we can
                         // update our position, cancel our some movement and keep going.
-                        if tmin >= 0.0 && tmin < 1.0 {
+                        if tmin >= 0.0 && tmin < dt_remaining {
                             // We hit this thing at time tmin.
                             self.collision_tiles.push((x as usize, y as usize));
 
