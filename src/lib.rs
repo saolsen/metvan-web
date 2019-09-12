@@ -235,12 +235,16 @@ impl Game {
                 let tile_y = (i / 32) as f32;
                 let tile_x = (i % 32) as f32;
                 if *tile > 0 {
-                    let tile_geometry = Aabb {
+                    let mut tile_geometry = Aabb {
                         center: glm::vec2(tile_x as f32 + 0.5, 18.0 - (tile_y as f32 + 0.5)),
                         extent: glm::vec2(0.5, 0.5),
                     };
 
-                    // Start with just point vs line again
+                    // minkowski
+                    tile_geometry.center.y -= player_geometry.extent.y;
+                    tile_geometry.extent.y += player_geometry.extent.y;
+                    tile_geometry.center.x += 0.0;
+                    tile_geometry.extent.x += player_geometry.extent.x;
 
                     // tile top
                     if ray_d.y < 0.0 {
