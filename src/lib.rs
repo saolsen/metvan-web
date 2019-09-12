@@ -155,10 +155,13 @@ impl Game {
         if accel.magnitude() > 0.0 {
             accel = accel.normalize();
         }
-        let speed = 1000.0;
+        let speed = 100.0;
         accel *= speed;
+
+        //console_log!("{:?}", self.player_dp);
+
         // @TODO: Better friction
-        //accel.x += -5.0 * self.player_dp.x;
+        accel += -5.0 * self.player_dp;
         // @NOTE: "reactivity"
         // @TODO: I really need better vectors...
         // this is a dot product or something.
@@ -202,6 +205,7 @@ impl Game {
                 };
 
                 if collides {
+                    //new_dp = glm::vec2(0.0, 0.0);
                     //self.collision_tiles.push((x as usize, y as usize));
                     //console_log!("collision: ({},{})", x, y);
                 }
@@ -218,112 +222,204 @@ impl Game {
         // @Q: Do I do this math in dt or in 0-1?
         //if new_p - self.player_p != glm::vec2(0.0, 0.0) {
         let mut dt_remaining = dt;
-        let mut ray_o = self.player_p; // origin
+        let mut ray_o = self.player_p; // origin of ray
         let mut new_p = 0.5 * accel * (dt * dt) + self.player_dp * dt + self.player_p;
         let mut ray_d = new_p - ray_o; // maybe / dt_remaining
         if ray_d.magnitude() > 0.0 {
             let magnitude = ray_d.magnitude() / dt_remaining;
             ray_d = ray_d.normalize() * magnitude;
         }
-        let mut hit_plane = glm::vec2(0.0, 0.0);
 
         //assert_eq!(ray_o + ray_d * dt_remaining, new_p);
 
         self.debug_ray = glm::vec2(ray_d.x, ray_d.y);
 
+        let mut min_hit_t = std::f32::INFINITY;
+        let mut hit_plane = glm::vec2(0.0, 0.0);
+
         'time: while dt_remaining > 0.0 {
             'tiles: for (i, tile) in TILE_MAP.iter_mut().enumerate() {
-                let y = (i / 32) as f32;
-                let x = (i % 32) as f32;
+                let tile_y = (i / 32) as f32;
+                let tile_x = (i % 32) as f32;
                 if *tile > 0 {
                     let tile_geometry = Aabb {
-                        center: glm::vec2(x as f32 + 0.5, 18.0 - (y as f32 + 0.5)),
+                        center: glm::vec2(tile_x as f32 + 0.5, 18.0 - (tile_y as f32 + 0.5)),
                         extent: glm::vec2(0.5, 0.5),
                     };
+
+                    // Start with just point vs line again
+
+                    // tile top
+                    if ray_d.y < 0.0 {
+                        let wy = tile_geometry.center.y + tile_geometry.extent.y;
+                        let poy = ray_o.y;
+                        let t = (wy - poy) / ray_d.y;
+                        if t > 0.0 && t < dt_remaining {
+                            let x = ray_o.x + ray_d.x * t;
+                            if x >= tile_geometry.center.x - tile_geometry.extent.x
+                                && x <= tile_geometry.center.x + tile_geometry.extent.x
+                            {
+                                if t < min_hit_t {
+                                    min_hit_t = t;
+                                    hit_plane = glm::vec2(0.0, 1.0);
+                                    self.collision_tiles
+                                        .push((tile_x as usize, tile_y as usize));
+                                }
+                            }
+                        }
+                    }
+
+                    // tile bottom
+                    if ray_d.y > 0.0 {
+                        let wy = tile_geometry.center.y - tile_geometry.extent.y;
+                        let poy = ray_o.y;
+                        let t = (wy - poy) / ray_d.y;
+                        if t > 0.0 && t < dt_remaining {
+                            let x = ray_o.x + ray_d.x * t;
+                            if x >= tile_geometry.center.x - tile_geometry.extent.x
+                                && x <= tile_geometry.center.x + tile_geometry.extent.x
+                            {
+                                if t < min_hit_t {
+                                    min_hit_t = t;
+                                    hit_plane = glm::vec2(0.0, 1.0);
+                                    self.collision_tiles
+                                        .push((tile_x as usize, tile_y as usize));
+                                }
+                            }
+                        }
+                    }
+
+                    // tile right
+                    if ray_d.x < 0.0 {
+                        let wx = tile_geometry.center.x + tile_geometry.extent.x;
+                        let pox = ray_o.x;
+                        let t = (wx - pox) / ray_d.x;
+                        if t > 0.0 && t < dt_remaining {
+                            let y = ray_o.y + ray_d.y * t;
+                            console_log!(
+                                "y: {}, tile({},{}) [{}-{}]",
+                                tile_y,
+                                tile_x,
+                                y,
+                                tile_geometry.center.y - tile_geometry.extent.y,
+                                tile_geometry.center.y + tile_geometry.extent.y
+                            );
+                            if y >= tile_geometry.center.y - tile_geometry.extent.y
+                                && y <= tile_geometry.center.y + tile_geometry.extent.y
+                            {
+                                if t < min_hit_t {
+                                    min_hit_t = t;
+                                    hit_plane = glm::vec2(1.0, 0.0);
+                                    self.collision_tiles
+                                        .push((tile_x as usize, tile_y as usize));
+                                }
+                            }
+                        }
+                    }
+
+                    // tile left
+                    if ray_d.x > 0.0 {
+                        let wx = tile_geometry.center.x - tile_geometry.extent.x;
+                        let pox = ray_o.x;
+                        let t = (wx - pox) / ray_d.x;
+                        if t > 0.0 && t < dt_remaining {
+                            let y = ray_o.y + ray_d.y * t;
+                            if y >= tile_geometry.center.y - tile_geometry.extent.y
+                                && y <= tile_geometry.center.y + tile_geometry.extent.y
+                            {
+                                if t < min_hit_t {
+                                    min_hit_t = t;
+                                    hit_plane = glm::vec2(1.0, 0.0);
+                                    self.collision_tiles
+                                        .push((tile_x as usize, tile_y as usize));
+                                }
+                            }
+                        }
+                    }
 
                     // @OPTIMIZATION: You can do a version of this without the branches.
                     // see https://tavianator.com/fast-branchless-raybounding-box-intersections-part-2-nans/
 
-                    let bmin_x =
-                        tile_geometry.center.x - tile_geometry.extent.x - player_geometry.extent.x;
-                    let bmax_x =
-                        tile_geometry.center.x + tile_geometry.extent.x + player_geometry.extent.x;
-                    let bmin_y = tile_geometry.center.y
-                        - tile_geometry.extent.y
-                        - player_geometry.extent.y * 2.0;
-                    let bmax_y = tile_geometry.center.y + tile_geometry.extent.y;
+                    // let bmin_x =
+                    //     tile_geometry.center.x - tile_geometry.extent.x - player_geometry.extent.x;
+                    // let bmax_x =
+                    //     tile_geometry.center.x + tile_geometry.extent.x + player_geometry.extent.x;
+                    // let bmin_y = tile_geometry.center.y
+                    //     - tile_geometry.extent.y
+                    //     - player_geometry.extent.y * 2.0;
+                    // let bmax_y = tile_geometry.center.y + tile_geometry.extent.y;
 
-                    let mut tmin = std::f32::NEG_INFINITY;
-                    let mut tmax = std::f32::INFINITY;
+                    // let mut tmin = std::f32::NEG_INFINITY;
+                    // let mut tmax = std::f32::INFINITY;
 
-                    if ray_d.x != 0.0 {
-                        let tx1 = (bmin_x - ray_o.x) / ray_d.x;
-                        let tx2 = (bmax_x - ray_o.x) / ray_d.x;
+                    // if ray_d.x != 0.0 {
+                    //     let tx1 = (bmin_x - ray_o.x) / ray_d.x;
+                    //     let tx2 = (bmax_x - ray_o.x) / ray_d.x;
 
-                        let min_x = f32::min(tx1, tx2);
-                        if min_x > tmin {
-                            tmin = min_x;
-                            hit_plane = glm::vec2(1.0, 0.0);
-                        }
-                        let max_x = f32::max(tx1, tx2);
-                        if max_x < tmax {
-                            tmax = max_x;
-                        }
-                    //tmin = f32::max(tmin, f32::min(tx1, tx2));
-                    //tmax = f32::min(tmax, f32::max(tx1, tx2));
-                    } else if ray_o.x <= bmin_x || ray_o.x >= bmax_x {
-                        continue 'tiles; // return false.
-                    }
-                    if ray_d.y != 0.0 {
-                        let ty1 = (bmin_y - ray_o.y) / ray_d.y;
-                        let ty2 = (bmax_y - ray_o.y) / ray_d.y;
+                    //     let min_x = f32::min(tx1, tx2);
+                    //     if min_x > tmin {
+                    //         tmin = min_x;
+                    //         hit_plane = glm::vec2(1.0, 0.0);
+                    //     }
+                    //     let max_x = f32::max(tx1, tx2);
+                    //     if max_x < tmax {
+                    //         tmax = max_x;
+                    //     }
+                    // //tmin = f32::max(tmin, f32::min(tx1, tx2));
+                    // //tmax = f32::min(tmax, f32::max(tx1, tx2));
+                    // } else if ray_o.x <= bmin_x || ray_o.x >= bmax_x {
+                    //     continue 'tiles; // return false.
+                    // }
+                    // if ray_d.y != 0.0 {
+                    //     let ty1 = (bmin_y - ray_o.y) / ray_d.y;
+                    //     let ty2 = (bmax_y - ray_o.y) / ray_d.y;
 
-                        let min_y = f32::min(ty1, ty2);
-                        if min_y > tmin {
-                            tmin = min_y;
-                            hit_plane = glm::vec2(0.0, 1.0);
-                        }
-                        let max_y = f32::max(ty1, ty2);
-                        if max_y < tmax {
-                            tmax = max_y;
-                        }
-                    // tmin = f32::max(tmin, f32::min(ty1, ty2));
-                    // tmax = f32::min(tmax, f32::max(ty1, ty2));
-                    } else if ray_o.y <= bmin_y || ray_o.y >= bmax_y {
-                        continue 'tiles; // return false.
-                    }
+                    //     let min_y = f32::min(ty1, ty2);
+                    //     if min_y > tmin {
+                    //         tmin = min_y;
+                    //         hit_plane = glm::vec2(0.0, 1.0);
+                    //     }
+                    //     let max_y = f32::max(ty1, ty2);
+                    //     if max_y < tmax {
+                    //         tmax = max_y;
+                    //     }
+                    // // tmin = f32::max(tmin, f32::min(ty1, ty2));
+                    // // tmax = f32::min(tmax, f32::max(ty1, ty2));
+                    // } else if ray_o.y <= bmin_y || ray_o.y >= bmax_y {
+                    //     continue 'tiles; // return false.
+                    // }
 
-                    if tmax >= tmin {
-                        // @TODO
-                        // We need the hit time and the normal of the hit, then we can
-                        // update our position, cancel our some movement and keep going.
-                        if tmin >= 0.0 && tmin < dt_remaining {
-                            // We hit this thing at time tmin.
-                            self.collision_tiles.push((x as usize, y as usize));
+                    // if tmax >= tmin {
+                    //     // @TODO
+                    //     // We need the hit time and the normal of the hit, then we can
+                    //     // update our position, cancel our some movement and keep going.
+                    //     if tmin >= 0.0 && tmin < dt_remaining {
+                    //         // We hit this thing at time tmin.
+                    //         self.collision_tiles.push((x as usize, y as usize));
 
-                            dt_remaining -= tmin;
-                            ray_o += ray_d * (tmin - 0.1);
-                            if hit_plane.x == 1.0 {
-                                ray_d.x = 0.0;
-                                new_dp.x = 0.0;
-                            } else if hit_plane.y == 1.0 {
-                                ray_d.y = 0.0;
-                                new_dp.y = 0.0;
-                            }
-                            break 'tiles;
-                        }
-                    }
+                    //         dt_remaining -= tmin;
+                    //         ray_o += ray_d * (tmin - 0.1);
+                    //         if hit_plane.x == 1.0 {
+                    //             ray_d.x = 0.0;
+                    //             new_dp.x = 0.0;
+                    //         } else if hit_plane.y == 1.0 {
+                    //             ray_d.y = 0.0;
+                    //             new_dp.y = 0.0;
+                    //         }
+                    //         break 'tiles;
+                    //     }
+                    // }
                 }
             }
             // No collisions happened.
             new_p = ray_o + ray_d * dt_remaining;
             break;
         }
-        if hit_plane.x == 1.0 {
-            new_dp.x = 0.0;
-        } else if hit_plane.y == 1.0 {
-            new_dp.y = 0.0;
-        }
+        // if hit_plane.x == 1.0 {
+        //     new_dp.x = 0.0;
+        // } else if hit_plane.y == 1.0 {
+        //     new_dp.y = 0.0;
+        // }
         self.player_dp = new_dp;
         self.player_p = new_p;
         // @TODO: Everything
@@ -331,7 +427,6 @@ impl Game {
     }
 
     pub fn render(&mut self, _dt_left: f64, renderer: &mut Renderer) {
-        console_log!("{:?}", self.player_p);
         // @TODO: Return draw lists or something of what to render.
         renderer.rects.clear();
         renderer.collision_tiles.clear();
