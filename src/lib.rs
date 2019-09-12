@@ -166,16 +166,17 @@ impl Game {
         // @TODO: I really need better vectors...
         // this is a dot product or something.
         if (accel.x > 0.0 && self.player_dp.x < 0.0) || (accel.x < 0.0 && self.player_dp.x > 0.0) {
-            //accel.x += accel.x * 0.5; // reactivity percent
+            accel.x += accel.x * 0.5; // reactivity percent
         }
         // @NOTE: Not the way to do this. Probably check landings and stuff.
         // if input.jump && self.t - self.player_jumped_at > 1.0 {
         if input.jump {
-            accel.y += 10.0;
+            accel.y += 2500.0;
+            // @TODO: maybe set input.jumped to false so we only process it once.
             self.player_jumped_at = self.t + (dt as f64);
         }
         // @TODO: Gravity
-        //accel.y -= 0.1;
+        accel.y -= 100.0;
 
         let player_geometry = Aabb {
             center: self.player_p + glm::vec2(0.0, 1.0 - 0.01),
@@ -183,42 +184,34 @@ impl Game {
         };
 
         // @NOTE: Just checking for collisions.
-        for (i, tile) in TILE_MAP.iter_mut().enumerate() {
-            let y = (i / 32) as f32;
-            let x = (i % 32) as f32;
-            if *tile > 0 {
-                let tile_geometry = Aabb {
-                    center: glm::vec2(x as f32 + 0.5, 18.0 - (y as f32 + 0.5)),
-                    extent: glm::vec2(0.5, 0.5),
-                };
+        if false {
+            for (i, tile) in TILE_MAP.iter_mut().enumerate() {
+                let y = (i / 32) as f32;
+                let x = (i % 32) as f32;
+                if *tile > 0 {
+                    let tile_geometry = Aabb {
+                        center: glm::vec2(x as f32 + 0.5, 18.0 - (y as f32 + 0.5)),
+                        extent: glm::vec2(0.5, 0.5),
+                    };
 
-                let a = &player_geometry;
-                let b = &tile_geometry;
-                let collides = if ((a.center.x - b.center.x).abs() > (a.extent.x + b.extent.x))
-                    || ((a.center.y - b.center.y).abs() > (a.extent.y + b.extent.y))
-                {
-                    false
-                } else {
-                    true
-                };
+                    let a = &player_geometry;
+                    let b = &tile_geometry;
+                    let collides = if ((a.center.x - b.center.x).abs() > (a.extent.x + b.extent.x))
+                        || ((a.center.y - b.center.y).abs() > (a.extent.y + b.extent.y))
+                    {
+                        false
+                    } else {
+                        true
+                    };
 
-                if collides {
-                    //new_dp = glm::vec2(0.0, 0.0);
-                    //self.collision_tiles.push((x as usize, y as usize));
-                    //console_log!("collision: ({},{})", x, y);
+                    if collides {
+                        //new_dp = glm::vec2(0.0, 0.0);
+                        //self.collision_tiles.push((x as usize, y as usize));
+                        //console_log!("collision: ({},{})", x, y);
+                    }
                 }
             }
         }
-
-        // How does this algorithm work? It's a raycast of my position against the tiles,
-        // but it's actually a minkowski sum thing becuase I'm an aabb too. Then I want to
-        // know the hit normal and the point on the ray that hits because I will
-        // move that far and cancel out the motion perpendicular to the normal or whatever
-        // but then keep going. We'll use the center of the aabb, not the position because
-        // that's how the math will work out with minkowski sums.
-
-        // @Q: Do I do this math in dt or in 0-1?
-        //if new_p - self.player_p != glm::vec2(0.0, 0.0) {
 
         let mut ray_o = self.player_p; // origin of ray
         let mut new_p = 0.5 * accel * (dt * dt) + self.player_dp * dt + self.player_p;
@@ -359,11 +352,6 @@ impl Game {
         }
 
         let mut new_dp = accel * dt + self.player_dp;
-        // if hit_plane.x == 1.0 {
-        //     new_dp.x = 0.0;
-        // } else if hit_plane.y == 1.0 {
-        //     new_dp.y = 0.0;
-        // }
         self.player_dp = new_dp;
         self.player_p = new_p;
         // @TODO: Everything
