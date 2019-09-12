@@ -256,11 +256,11 @@ impl Game {
                             if x >= tile_geometry.center.x - tile_geometry.extent.x
                                 && x <= tile_geometry.center.x + tile_geometry.extent.x
                             {
+                                self.collision_tiles
+                                    .push((tile_x as usize, tile_y as usize));
                                 if t < min_hit_t {
                                     min_hit_t = t;
                                     hit_plane = glm::vec2(0.0, 1.0);
-                                    self.collision_tiles
-                                        .push((tile_x as usize, tile_y as usize));
                                 }
                             }
                         }
@@ -276,11 +276,11 @@ impl Game {
                             if x >= tile_geometry.center.x - tile_geometry.extent.x
                                 && x <= tile_geometry.center.x + tile_geometry.extent.x
                             {
+                                self.collision_tiles
+                                    .push((tile_x as usize, tile_y as usize));
                                 if t < min_hit_t {
                                     min_hit_t = t;
                                     hit_plane = glm::vec2(0.0, 1.0);
-                                    self.collision_tiles
-                                        .push((tile_x as usize, tile_y as usize));
                                 }
                             }
                         }
@@ -296,11 +296,11 @@ impl Game {
                             if y >= tile_geometry.center.y - tile_geometry.extent.y
                                 && y <= tile_geometry.center.y + tile_geometry.extent.y
                             {
+                                self.collision_tiles
+                                    .push((tile_x as usize, tile_y as usize));
                                 if t < min_hit_t {
                                     min_hit_t = t;
                                     hit_plane = glm::vec2(1.0, 0.0);
-                                    self.collision_tiles
-                                        .push((tile_x as usize, tile_y as usize));
                                 }
                             }
                         }
@@ -316,11 +316,11 @@ impl Game {
                             if y >= tile_geometry.center.y - tile_geometry.extent.y
                                 && y <= tile_geometry.center.y + tile_geometry.extent.y
                             {
+                                self.collision_tiles
+                                    .push((tile_x as usize, tile_y as usize));
                                 if t < min_hit_t {
                                     min_hit_t = t;
                                     hit_plane = glm::vec2(1.0, 0.0);
-                                    self.collision_tiles
-                                        .push((tile_x as usize, tile_y as usize));
                                 }
                             }
                         }
