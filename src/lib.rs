@@ -28,12 +28,12 @@ const TILE_MAP: [u8; 32 * 18] = [
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 2, 2, 2, 3, 3, 3, 2, 2, 2, 3, 3, 3, 2, 2, 2, 3, 3, 3, 2, 2, 2, 3, 3, 3, 2, 2, 2, 3, 3, 3, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
@@ -114,7 +114,22 @@ pub struct Game {
     debug_ray: glm::Vec2,
 }
 
-// How can we figure out the physics numbers.
+// So, the player is 2 tiles tall. That is pretty tall.
+// I wanna do the math like this, modeled on celeste.
+const SECONDS_PER_FRAME: f32 = 1.0 / 60.0;
+const JUMP_MAX_HEIGHT: f32 = 4.0; // 3 tiles
+const TIME_TO_MAX_HEIGHT: f32 = 36.0 * SECONDS_PER_FRAME; // 36 frames
+
+const MAX_SPEED: f32 = 10.0; // 5 tiles per second.
+const TIME_TO_MAX_SPEED: f32 = 6.0 * SECONDS_PER_FRAME; // 6 frames
+const TIME_TO_STOP_FROM_MAX_SPEED: f32 = 3.0 * SECONDS_PER_FRAME; // 3 frames
+
+// so, based on these numbers, what's the acceleration and what's the friction?
+//const SPEED: f32 = 0.0;
+const SPEED: f32 = MAX_SPEED / TIME_TO_MAX_SPEED;
+const FRICTION: f32 = MAX_SPEED / TIME_TO_STOP_FROM_MAX_SPEED;
+
+// How can we figure out the physics numbers?
 
 // I think I want the max jump height to be 3.
 // That would let me have a really big jump.
@@ -127,7 +142,7 @@ impl Game {
         Self {
             t: 0.0,
             player_jumped_at: 0.0,
-            player_p: glm::vec2(5.1, 5.1),
+            player_p: glm::vec2(5.1, 8.1),
             player_dp: glm::vec2(0.0, 0.0),
             collision_tiles: vec![],
             debug_ray: glm::vec2(0.0, 0.0),
@@ -155,18 +170,15 @@ impl Game {
         if accel.magnitude() > 0.0 {
             accel = accel.normalize();
         }
-        let speed = 100.0;
-        accel *= speed;
+        accel *= SPEED;
 
         //console_log!("{:?}", self.player_dp);
 
-        // @TODO: Better friction
-        accel += -5.0 * self.player_dp;
         // @NOTE: "reactivity"
         // @TODO: I really need better vectors...
         // this is a dot product or something.
         if (accel.x > 0.0 && self.player_dp.x < 0.0) || (accel.x < 0.0 && self.player_dp.x > 0.0) {
-            accel.x += accel.x * 0.5; // reactivity percent
+            //accel.x += accel.x * 0.5; // reactivity percent
         }
         // @NOTE: Not the way to do this. Probably check landings and stuff.
         // if input.jump && self.t - self.player_jumped_at > 1.0 {
@@ -211,6 +223,18 @@ impl Game {
                     }
                 }
             }
+        }
+
+        let mut new_dp = accel * dt + self.player_dp;
+        // @TODO: Better friction
+        new_dp.x += -FRICTION * new_dp.x;
+
+        self.player_dp = new_dp;
+        if self.player_dp.x > MAX_SPEED {
+            self.player_dp.x = MAX_SPEED;
+        }
+        if self.player_dp.x < -MAX_SPEED {
+            self.player_dp.x = -MAX_SPEED;
         }
 
         let mut ray_o = self.player_p; // origin of ray
