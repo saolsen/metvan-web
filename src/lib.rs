@@ -138,7 +138,7 @@ impl Game {
         }
     }
 
-    pub fn update(&mut self, input: &Input) {
+    pub fn update(&mut self, input: &mut Input) {
         if let Some(tile_map) = self
             .world
             .rooms
@@ -155,12 +155,12 @@ impl Game {
             if input.right {
                 accel.x += 1.0;
             }
-            if input.up {
-                accel.y += 1.0;
-            }
-            if input.down {
-                accel.y -= 1.0;
-            }
+            // if input.up {
+            //     accel.y += 1.0;
+            // }
+            // if input.down {
+            //     accel.y -= 1.0;
+            // }
             if accel.magnitude() > 0.0 {
                 accel = accel.normalize();
             }
@@ -178,9 +178,10 @@ impl Game {
             }
             // @NOTE: Not the way to do this. Probably check landings and stuff.
             // if input.jump && self.t - self.player_jumped_at > 1.0 {
-            if input.jump {
+            if input.jump && self.t - self.player_jumped_at > 0.5 {
                 accel.y += 2500.0;
                 // @TODO: maybe set input.jumped to false so we only process it once.
+                input.jump = false;
                 self.player_jumped_at = self.t + (dt as f64);
             }
             // @TODO: Gravity
@@ -551,7 +552,7 @@ impl Platform {
         let mut dt = self.dt + f64::min(1.0, (t - self.last_t) / 1000.0);
         while dt > TICK {
             dt = dt - TICK;
-            self.game.update(&self.input);
+            self.game.update(&mut self.input);
         }
         self.dt = dt;
         self.last_t = t;

@@ -1,3 +1,9 @@
+// What's the best way to start out the levels? Is it to design some levels manually?
+// Is it to do something else? Powerups or a goal or something?
+
+// I sort of think I should fix jump first.
+// Jump at and a timer and checking if I'm on the ground.
+
 use std::collections::HashMap;
 
 pub const STANDARD_ROOM: [u8; 32 * 18] = [
