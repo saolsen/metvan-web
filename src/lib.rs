@@ -7,6 +7,13 @@
 // I am getting a little bored of working on the physics stuff. I think what I have is sort of a little
 // bit good enough to start working on a bigger map and a camera.
 
+// Are we doing puzzles or are we doing fighting?
+// I'm not sure yet.
+// better jump code, or abilities, or map design or what?
+// squash and stretch jump animations.
+// real animations for everything!
+// camera for moving around
+
 extern crate nalgebra_glm as glm; // @TODO: Probably just write this ourselves.
 
 use std::f64;
