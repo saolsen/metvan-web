@@ -225,9 +225,11 @@ impl Game {
             }
         }
 
+        //accel.x = accel.x - FRICTION * self.player_dp;
+
         let mut new_dp = accel * dt + self.player_dp;
         // @TODO: Better friction
-        new_dp.x += -FRICTION * new_dp.x;
+        //new_dp.x += -FRICTION * new_dp.x;
 
         self.player_dp = new_dp;
         if self.player_dp.x > MAX_SPEED {
@@ -353,7 +355,6 @@ impl Game {
             }
             // now we've been over every tile, was there a hit?
             if min_hit_t < std::f32::INFINITY {
-                console_log!("HIT!");
                 dt_remaining -= min_hit_t;
                 ray_o = ray_o + ray_d * (min_hit_t - 0.001);
 
