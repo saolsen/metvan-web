@@ -127,7 +127,8 @@ const TIME_TO_STOP_FROM_MAX_SPEED: f32 = 3.0 * SECONDS_PER_FRAME; // 3 frames
 // so, based on these numbers, what's the acceleration and what's the friction?
 //const SPEED: f32 = 0.0;
 const SPEED: f32 = MAX_SPEED / TIME_TO_MAX_SPEED;
-const FRICTION: f32 = MAX_SPEED / TIME_TO_STOP_FROM_MAX_SPEED;
+//const FRICTION: f32 = MAX_SPEED / TIME_TO_STOP_FROM_MAX_SPEED;
+const FRICTION: f32 = 10.0;
 
 // How can we figure out the physics numbers?
 
@@ -225,11 +226,10 @@ impl Game {
             }
         }
 
-        //accel.x = accel.x - FRICTION * self.player_dp;
-
+        // The problem, Is I want to calculate everything based on max jump height and speed.
+        // I need to calculate friction into that though, which is harder. I'm very bad at this.
         let mut new_dp = accel * dt + self.player_dp;
-        // @TODO: Better friction
-        //new_dp.x += -FRICTION * new_dp.x;
+        new_dp = new_dp / (1.0 + FRICTION * dt);
 
         self.player_dp = new_dp;
         if self.player_dp.x > MAX_SPEED {
