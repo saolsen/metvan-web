@@ -14,6 +14,13 @@
 // real animations for everything!
 // camera for moving around
 
+// I'm not sure I'll get to code today but here's a plan for my next prototype.
+// Let's GENERATE a map (using the current scrolling camera)
+// The goal is to get to the anti sun.
+// There will be 1 powerup, a double jump.
+// Generate a level where you have to get the double jump, then you can get to the antisun.
+// This is going to be a hard problem actuially!
+
 extern crate nalgebra_glm as glm; // @TODO: Probably just write this ourselves.
 
 use std::f64;
