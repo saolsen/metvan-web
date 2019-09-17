@@ -21,6 +21,8 @@
 // Generate a level where you have to get the double jump, then you can get to the antisun.
 // This is going to be a hard problem actuially!
 
+// Do I program the double jump first? Should I do double jump or super jump?
+
 extern crate nalgebra_glm as glm; // @TODO: Probably just write this ourselves.
 
 use std::f64;
