@@ -71,6 +71,7 @@ pub enum Color {
     LightGreen,
     LightBlue,
     Black,
+    DarkGray,
     Green,
     Red,
 }
@@ -111,6 +112,8 @@ pub struct Game {
     player_p: glm::Vec2,
     player_dp: glm::Vec2,
 
+    player_can_pass: u8,
+
     collision_tiles: Vec<(usize, usize)>,
     debug_ray: glm::Vec2,
 }
@@ -149,6 +152,7 @@ impl Game {
             player_jumped_at: 0.0,
             player_p: glm::vec2(5.1, 8.1),
             player_dp: glm::vec2(0.0, 0.0),
+            player_can_pass: 3,
             collision_tiles: vec![],
             debug_ray: glm::vec2(0.0, 0.0),
         }
@@ -273,7 +277,7 @@ impl Game {
                 'tiles: for (i, tile) in tile_map.iter().enumerate() {
                     let tile_y = (i / 32) as f32;
                     let tile_x = (i % 32) as f32;
-                    if *tile > 0 {
+                    if *tile > self.player_can_pass {
                         let mut tile_geometry = Aabb {
                             center: glm::vec2(tile_x as f32 + 0.5, 18.0 - (tile_y as f32 + 0.5)),
                             extent: glm::vec2(0.5, 0.5),
@@ -440,7 +444,7 @@ impl Game {
                         1 => Color::Brown,
                         2 => Color::LightGreen,
                         3 => Color::LightBlue,
-                        _ => Color::Black,
+                        _ => Color::DarkGray,
                     };
 
                     /* for (colx, coly) in &renderer.collision_tiles {
@@ -465,6 +469,27 @@ impl Game {
                 glm::vec2(0.5, 1.0),
                 Color::Green,
             );
+            if self.player_can_pass > 0 {
+                renderer.rect(
+                    self.player_p + glm::vec2(0.0, 1.0) + glm::vec2(0.0, 1.0),
+                    glm::vec2(0.4, 0.25),
+                    Color::Brown,
+                );
+            }
+            if self.player_can_pass > 1 {
+                renderer.rect(
+                    self.player_p + glm::vec2(0.0, 1.0) + glm::vec2(0.0, 1.25),
+                    glm::vec2(0.3, 0.25),
+                    Color::LightGreen,
+                );
+            }
+            if self.player_can_pass > 2 {
+                renderer.rect(
+                    self.player_p + glm::vec2(0.0, 1.0) + glm::vec2(0.0, 1.5),
+                    glm::vec2(0.2, 0.25),
+                    Color::LightBlue,
+                );
+            }
         }
     }
 }
@@ -613,10 +638,11 @@ impl Platform {
             self.ctx.save();
             // @TODO: Cache these don't make strings every frame.
             match &rect.color {
-                Color::Brown => self.ctx.set_fill_style(&JsValue::from_str("brown")),
-                Color::LightGreen => self.ctx.set_fill_style(&JsValue::from_str("lightgreen")),
-                Color::LightBlue => self.ctx.set_fill_style(&JsValue::from_str("lightblue")),
+                Color::Brown => self.ctx.set_fill_style(&JsValue::from_str("yellow")),
+                Color::LightGreen => self.ctx.set_fill_style(&JsValue::from_str("red")),
+                Color::LightBlue => self.ctx.set_fill_style(&JsValue::from_str("blue")),
                 Color::Black => self.ctx.set_fill_style(&JsValue::from_str("black")),
+                Color::DarkGray => self.ctx.set_fill_style(&JsValue::from_str("darkgray")),
                 Color::Green => self.ctx.set_fill_style(&JsValue::from_str("green")),
                 Color::Red => self.ctx.set_fill_style(&JsValue::from_str("red")),
             };
