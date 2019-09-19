@@ -278,6 +278,8 @@ impl Game {
                     let tile_y = (i / 32) as f32;
                     let tile_x = (i % 32) as f32;
                     if *tile > self.player_can_pass {
+                        // I would like this to be a function I can call I think, need to hit some other stuff.
+
                         let mut tile_geometry = Aabb {
                             center: glm::vec2(tile_x as f32 + 0.5, 18.0 - (tile_y as f32 + 0.5)),
                             extent: glm::vec2(0.5, 0.5),
@@ -458,6 +460,22 @@ impl Game {
                         glm::vec2(0.5, 0.5),
                         color,
                     );
+                }
+            }
+
+            if let Some(room_entities) = self
+                .world
+                .room_entities
+                .get(&(self.player_room_x, self.player_room_y))
+            {
+                for orb in room_entities {
+                    let color = match orb.level {
+                        1 => Color::Brown,
+                        2 => Color::LightGreen,
+                        3 => Color::LightBlue,
+                        _ => Color::Black,
+                    };
+                    renderer.rect(orb.pos, glm::vec2(0.5, 0.5), color);
                 }
             }
 

@@ -6,6 +6,11 @@
 
 use std::collections::HashMap;
 
+pub struct Orb {
+    pub pos: glm::Vec2,
+    pub level: u8,
+}
+
 pub const EMPTY_ROOM: [u8; 32 * 18] = [
     4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
     4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
@@ -28,6 +33,7 @@ pub const EMPTY_ROOM: [u8; 32 * 18] = [
 ];
 pub struct World {
     pub rooms: HashMap<(i32, i32), [u8; 32 * 18]>,
+    pub room_entities: HashMap<(i32, i32), Vec<Orb>>,
 }
 
 impl World {
@@ -42,12 +48,20 @@ impl World {
         // at the end is the anti sun.
         // this will make an extremely shitty but functional map.
 
-        // Yeah, I think this flood fill algorithm would be a good place to start.
-        // Just loop out 10 rooms or something?
         let mut rooms = HashMap::new();
         rooms.insert((0, 0), 0);
         let mut min_x = 0;
         let mut max_x = 0;
+
+        // We now need to be able to place entities into rooms.
+        let mut room_entities = HashMap::new();
+        room_entities.insert(
+            (0, 0),
+            vec![Orb {
+                pos: glm::vec2(10.0, 3.0),
+                level: 1,
+            }],
+        );
 
         // somehow pick a tile on the boarder.
         // @NOTE: making it easier again, just doing x!
@@ -55,6 +69,14 @@ impl World {
         for i in 0..10 {
             let y = 0;
             let x = if i % 2 == 0 { min_x - 1 } else { max_x + 1 };
+            if (i + 1) % 3 == 0 {
+                // add an orb that activates the next level? LOL OR SOMETHING.
+                let room_e = room_entities.entry((x, y)).or_insert(vec![]);
+                room_e.push(Orb {
+                    pos: glm::vec2(10.0, 3.0),
+                    level: level + 1,
+                });
+            }
             if i % 3 == 0 {
                 level = level + 1;
             }
@@ -71,18 +93,18 @@ impl World {
         // we can do like an always going up thing first, even though that's not quite what we're getting at.
 
         let mut map = HashMap::new();
-        for ((x, y), room) in &rooms {
+        for ((x, y), room_level) in &rooms {
             let mut new_room = EMPTY_ROOM;
 
-            if let Some(next_room) = rooms.get(&(x - 1, *y)) {
-                let door = i32::max(*room, *next_room) as u8;
+            if let Some(next_room_level) = rooms.get(&(x - 1, *y)) {
+                let door = u8::max(*room_level, *next_room_level);
                 // add door to the left
                 new_room[32 * 14] = door;
                 new_room[32 * 15] = door;
                 new_room[32 * 16] = door;
             }
-            if let Some(next_room) = rooms.get(&(x + 1, *y)) {
-                let door = i32::max(*room, *next_room) as u8;
+            if let Some(next_room_level) = rooms.get(&(x + 1, *y)) {
+                let door = u8::max(*room_level, *next_room_level);
                 // add door to the right
                 new_room[32 * 14 + 31] = door;
                 new_room[32 * 15 + 31] = door;
@@ -98,7 +120,10 @@ impl World {
         // rooms.insert((0, 1), ROLLTHRU_ROOM);
         // rooms.insert((-1, 1), OVERHANG_ROOM);
         // rooms.insert((-1, 0), SUN_ROOM);
-        Self { rooms: map }
+        Self {
+            rooms: map,
+            room_entities,
+        }
     }
 }
 
