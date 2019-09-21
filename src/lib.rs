@@ -1,6 +1,4 @@
 // Next Steps
-// use extra dt on render
-// better jump code
 
 // I will probably go full vector graphics world with minkowski but this part is the same either way.
 
@@ -386,7 +384,7 @@ impl Game {
         }
     }
 
-    pub fn render(&mut self, _dt_left: f64, renderer: &mut Renderer) {
+    pub fn render(&mut self, dt_remaining: f32, renderer: &mut Renderer) {
         // @TODO: Return draw lists or something of what to render.
         renderer.rects.clear();
         renderer.collision_tiles.clear();
@@ -444,28 +442,30 @@ impl Game {
             // Player
             // @TODO: Use remaining dt for this.
             //console_log!("player: ({},{})", self.player_p.x, self.player_p.y);
+            let player_p = self.player_p + self.player_dp * dt_remaining;
+
             renderer.rect(
-                self.player_p + glm::vec2(0.0, 1.0),
+                player_p + glm::vec2(0.0, 1.0),
                 glm::vec2(0.5, 1.0),
                 Color::Green,
             );
             if self.player_can_pass > 0 {
                 renderer.rect(
-                    self.player_p + glm::vec2(0.0, 1.0) + glm::vec2(0.0, 1.0),
+                    player_p + glm::vec2(0.0, 1.0) + glm::vec2(0.0, 1.0),
                     glm::vec2(0.4, 0.25),
                     Color::Brown,
                 );
             }
             if self.player_can_pass > 1 {
                 renderer.rect(
-                    self.player_p + glm::vec2(0.0, 1.0) + glm::vec2(0.0, 1.25),
+                    player_p + glm::vec2(0.0, 1.0) + glm::vec2(0.0, 1.25),
                     glm::vec2(0.3, 0.25),
                     Color::LightGreen,
                 );
             }
             if self.player_can_pass > 2 {
                 renderer.rect(
-                    self.player_p + glm::vec2(0.0, 1.0) + glm::vec2(0.0, 1.5),
+                    player_p + glm::vec2(0.0, 1.0) + glm::vec2(0.0, 1.5),
                     glm::vec2(0.2, 0.25),
                     Color::LightBlue,
                 );
@@ -579,9 +579,7 @@ impl Platform {
         self.last_t = t;
         self.input.jump = false;
 
-        // @TODO: There is still dt time left over
-        // Use that to interpolate stuff when rendering.
-        self.game.render(dt, &mut self.renderer);
+        self.game.render(dt as f32, &mut self.renderer);
 
         let display_width = self.canvas.client_width() as u32 * self.dpr as u32;
         let display_height = self.canvas.client_height() as u32 * self.dpr as u32;
