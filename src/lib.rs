@@ -54,6 +54,8 @@ pub struct Input {
     pub left: bool,
     pub right: bool,
     pub jump: bool,
+
+    pub view_map: bool,
 }
 
 #[derive(Debug)]
@@ -102,7 +104,15 @@ impl Renderer {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub enum GameMode {
+    Playing,
+    ViewingTheMap,
+}
+
 pub struct Game {
+    mode: GameMode,
+
     world: map::World,
     t: f64, // Game Time
 
@@ -135,6 +145,7 @@ const FRICTION: f32 = 10.0;
 impl Game {
     pub fn new() -> Self {
         Self {
+            mode: GameMode::Playing,
             world: map::World::new(),
             t: 0.0,
             player_room_x: 0,
@@ -154,6 +165,18 @@ impl Game {
             .rooms
             .get(&(self.player_room_x, self.player_room_y))
         {
+            if input.view_map {
+                match self.mode {
+                    GameMode::Playing => self.mode = GameMode::ViewingTheMap,
+                    GameMode::ViewingTheMap => self.mode = GameMode::Playing,
+                };
+                input.view_map = false;
+            }
+
+            if self.mode == GameMode::ViewingTheMap {
+                return;
+            }
+
             let dt = 1.0 / 60.0;
             self.collision_tiles.clear();
 
@@ -164,12 +187,14 @@ impl Game {
             if input.right {
                 accel.x += 1.0;
             }
-            // if input.up {
-            //     accel.y += 1.0;
-            // }
-            // if input.down {
-            //     accel.y -= 1.0;
-            // }
+            if self.player_can_pass >= 4 {
+                if input.up {
+                    accel.y += 1.0;
+                }
+                if input.down {
+                    accel.y -= 1.0;
+                }
+            }
             if accel.magnitude() > 0.0 {
                 accel = accel.normalize();
             }
@@ -190,7 +215,9 @@ impl Game {
                 self.player_jumped_at = self.t + (dt as f64);
             }
             // @TODO: Gravity
-            accel.y -= 100.0;
+            if self.player_can_pass < 4 {
+                accel.y -= 100.0;
+            }
 
             let player_geometry = Aabb {
                 center: self.player_p + glm::vec2(0.0, 1.0 - 0.01),
@@ -339,6 +366,47 @@ impl Game {
 
         renderer.debug_ray = self.debug_ray;
 
+        // I think I probably can make this work without altering my renderer though it's
+        // a little bit hacky.
+        if self.mode == GameMode::ViewingTheMap {
+            // Draw out the map.
+            for ((x, y), _room) in &self.world.rooms {
+                if let Some(level) = self.world.room_levels.get(&(*x, *y)) {
+                    let outer_color = match level {
+                        0 => Color::Rock,
+                        1 => Color::Red,
+                        2 => Color::Green,
+                        3 => Color::Blue,
+                        _ => Color::Black,
+                    };
+
+                    renderer.rect(
+                        glm::vec2((*x as f32) + 16.0, (*y as f32) + 9.0),
+                        glm::vec2(0.5, 0.5),
+                        outer_color,
+                    );
+                }
+
+                renderer.rect(
+                    glm::vec2((*x as f32) + 16.0, (*y as f32) + 9.0),
+                    glm::vec2(0.4, 0.4),
+                    Color::Gray,
+                );
+
+                if *x == self.player_room_x && *y == self.player_room_y {
+                    // add the player to the room.
+                    let color = Color::LightBlue;
+                    renderer.rect(
+                        glm::vec2((*x as f32) + 16.0, (*y as f32) + 9.0),
+                        glm::vec2(0.25, 0.25),
+                        color,
+                    );
+                }
+            }
+
+            return;
+        }
+
         if let Some(tile_map) = self
             .world
             .rooms
@@ -353,7 +421,9 @@ impl Game {
                         1 => Color::Red,
                         2 => Color::Green,
                         3 => Color::Blue,
-                        _ => Color::Rock,
+                        4 => Color::Rock,
+                        5 => Color::Black,
+                        _ => Color::DebugPink,
                     };
 
                     // for (colx, coly) in &renderer.collision_tiles {
@@ -477,6 +547,7 @@ impl Platform {
             left: false,
             right: false,
             jump: false,
+            view_map: false,
         };
 
         let renderer = Renderer {
@@ -504,6 +575,7 @@ impl Platform {
             Key::S => self.input.down = pressed,
             Key::A => self.input.left = pressed,
             Key::D => self.input.right = pressed,
+            Key::M => self.input.view_map = pressed,
             Key::Space => {
                 if pressed {
                     self.input.jump = true

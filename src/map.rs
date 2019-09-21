@@ -34,6 +34,7 @@ pub const EMPTY_ROOM: [u8; 32 * 18] = [
 pub struct World {
     pub rooms: HashMap<(i32, i32), [u8; 32 * 18]>,
     pub room_entities: HashMap<(i32, i32), Vec<Orb>>,
+    pub room_levels: HashMap<(i32, i32), u8>,
 }
 
 impl World {
@@ -65,6 +66,8 @@ impl World {
 
         // somehow pick a tile on the boarder.
         // @NOTE: making it easier again, just doing x!
+        // couple things, for one I'd like to see the map!
+
         let mut level = 0;
         for i in 0..10 {
             let y = 0;
@@ -80,6 +83,7 @@ impl World {
             if i % 3 == 0 {
                 level = level + 1;
             }
+
             rooms.insert((x, y), level);
             min_x = i32::min(x, min_x);
             max_x = i32::max(x, max_x);
@@ -111,6 +115,18 @@ impl World {
                 new_room[32 * 16 + 31] = door;
             }
 
+            if *room_level == 4 {
+                new_room[32 * 6 + 15] = 5;
+                new_room[32 * 6 + 16] = 5;
+                new_room[32 * 6 + 17] = 5;
+                new_room[32 * 5 + 15] = 5;
+                new_room[32 * 5 + 16] = 5;
+                new_room[32 * 5 + 17] = 5;
+                new_room[32 * 4 + 15] = 5;
+                new_room[32 * 4 + 16] = 5;
+                new_room[32 * 4 + 17] = 5;
+            }
+
             map.insert((*x, *y), new_room);
         }
 
@@ -123,6 +139,7 @@ impl World {
         Self {
             rooms: map,
             room_entities,
+            room_levels: rooms,
         }
     }
 }
