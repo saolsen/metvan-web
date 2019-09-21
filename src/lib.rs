@@ -154,7 +154,7 @@ impl Game {
             player_jumped_at: 0.0,
             player_p: glm::vec2(5.1, 8.1),
             player_dp: glm::vec2(0.0, 0.0),
-            player_can_pass: 3,
+            player_can_pass: 0,
             collision_tiles: vec![],
             debug_ray: glm::vec2(0.0, 0.0),
         }
@@ -300,10 +300,18 @@ impl Game {
                         }
                     }
                 }
+
+                // Maybe we can track the player's actual movement.
+                let moved_from;
+                let moved_to;
+                let mut should_break = false;
+
                 // now we've been over every tile, was there a hit?
                 if min_hit_t < std::f32::INFINITY {
                     dt_remaining -= min_hit_t;
+                    moved_from = self.player_p;
                     self.player_p = self.player_p + ray * (min_hit_t - 0.001);
+                    moved_to = self.player_p;
 
                     if hit_plane.x != 0.0 {
                         self.player_dp.x = 0.0;
@@ -322,7 +330,35 @@ impl Game {
                         ray = ray.normalize() * magnitude;
                     }
                 } else {
+                    moved_from = self.player_p;
                     self.player_p = self.player_p + ray * dt_remaining;
+                    moved_to = self.player_p;
+                    should_break = true;
+                }
+
+                // here we can maybe see if we hit anything else?
+                let ray = moved_to - moved_from;
+
+                if let Some(room_entities) = self
+                    .world
+                    .room_entities
+                    .get(&(self.player_room_x, self.player_room_y))
+                {
+                    for orb in room_entities {
+                        let orb_geometry = Aabb {
+                            center: orb.pos,
+                            extent: glm::vec2(0.5, 0.5),
+                        };
+                        let SweepResult { hit, .. } =
+                            sweep_aabb(&player_geometry, &orb_geometry, &ray, 1.0);
+
+                        if hit && orb.level > self.player_can_pass {
+                            self.player_can_pass = orb.level;
+                        }
+                    }
+                }
+
+                if should_break {
                     break;
                 }
             }
