@@ -337,21 +337,54 @@ impl Game {
             self.player_dp = accel * dt + self.player_dp;
 
             // @NOTE: Screen scrolling.
+            // @TODO: Don't do this if there's no room over there!
             if self.player_p.x > 32.0 {
-                self.player_room_x += 1;
-                self.player_p.x -= 32.0
+                if let Some(room) = self
+                    .world
+                    .rooms
+                    .get(&(self.player_room_x + 1, self.player_room_y))
+                {
+                    self.player_room_x += 1;
+                    self.player_p.x -= 32.0
+                } else {
+                    self.player_p.x = 32.0
+                }
             }
             if self.player_p.x < 0.0 {
-                self.player_room_x -= 1;
-                self.player_p.x += 32.0
+                if let Some(room) = self
+                    .world
+                    .rooms
+                    .get(&(self.player_room_x - 1, self.player_room_y))
+                {
+                    self.player_room_x -= 1;
+                    self.player_p.x += 32.0
+                } else {
+                    self.player_p.x = 0.0
+                }
             }
             if self.player_p.y > 18.0 {
-                self.player_room_y += 1;
-                self.player_p.y -= 18.0
+                if let Some(room) = self
+                    .world
+                    .rooms
+                    .get(&(self.player_room_x, self.player_room_y + 1))
+                {
+                    self.player_room_y += 1;
+                    self.player_p.y -= 18.0
+                } else {
+                    self.player_p.y = 18.0
+                }
             }
             if self.player_p.y < 0.0 {
-                self.player_room_y -= 1;
-                self.player_p.y += 18.0
+                if let Some(room) = self
+                    .world
+                    .rooms
+                    .get(&(self.player_room_x, self.player_room_y - 1))
+                {
+                    self.player_room_y -= 1;
+                    self.player_p.y += 18.0
+                } else {
+                    self.player_p.y = 0.0
+                }
             }
             // @TODO: Everything
             self.t += TICK;
