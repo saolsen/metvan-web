@@ -1,16 +1,11 @@
 // Next Steps
 
-// I will probably go full vector graphics world with minkowski but this part is the same either way.
-
-// I am getting a little bored of working on the physics stuff. I think what I have is sort of a little
-// bit good enough to start working on a bigger map and a camera.
-
 // Are we doing puzzles or are we doing fighting?
 // I'm not sure yet.
 // better jump code, or abilities, or map design or what?
 // squash and stretch jump animations.
 // real animations for everything!
-// camera for moving around
+// camera for moving around?
 
 // I'm not sure I'll get to code today but here's a plan for my next prototype.
 // Let's GENERATE a map (using the current scrolling camera)
@@ -34,10 +29,6 @@ mod platform;
 
 use collide::{sweep_aabb, SweepResult};
 use platform::Key;
-
-// For testing
-// bottom left is 0,0
-//const TILE_MAP: [u8; 32 * 18] = map::STANDARD_ROOM;
 
 const TICK: f64 = 1.0 / 60.0;
 
@@ -67,13 +58,23 @@ pub struct Input {
 
 #[derive(Debug)]
 pub enum Color {
-    Brown,
-    LightGreen,
-    LightBlue,
+    DebugPink,
     Black,
+    DarkPurple,
+    DarkBlue,
     DarkGray,
-    Green,
+    Gray,
+    MediumBlue,
+    LightBlue,
+    White,
+    LightSand,
+    MediumSand,
+    DarkSand,
+    Rock,
+    DarkRock,
     Red,
+    Green,
+    Blue,
 }
 
 #[derive(Debug)]
@@ -118,8 +119,8 @@ pub struct Game {
     debug_ray: glm::Vec2,
 }
 
-// So, the player is 2 tiles tall. That is pretty tall.
-// I wanna do the math like this, modeled on celeste.
+// @TODO: Friction and jump aren't data driven yet.
+
 const SECONDS_PER_FRAME: f32 = 1.0 / 60.0;
 const JUMP_MAX_HEIGHT: f32 = 4.0; // 3 tiles
 const TIME_TO_MAX_HEIGHT: f32 = 36.0 * SECONDS_PER_FRAME; // 36 frames
@@ -128,19 +129,8 @@ const MAX_SPEED: f32 = 10.0; // 5 tiles per second.
 const TIME_TO_MAX_SPEED: f32 = 6.0 * SECONDS_PER_FRAME; // 6 frames
 const TIME_TO_STOP_FROM_MAX_SPEED: f32 = 3.0 * SECONDS_PER_FRAME; // 3 frames
 
-// so, based on these numbers, what's the acceleration and what's the friction?
-//const SPEED: f32 = 0.0;
 const SPEED: f32 = MAX_SPEED / TIME_TO_MAX_SPEED;
-//const FRICTION: f32 = MAX_SPEED / TIME_TO_STOP_FROM_MAX_SPEED;
 const FRICTION: f32 = 10.0;
-
-// How can we figure out the physics numbers?
-
-// I think I want the max jump height to be 3.
-// That would let me have a really big jump.
-
-// I think all my parameters have to come from calculations
-// about what I want my max jump height to be and my max speed or something like that.
 
 impl Game {
     pub fn new() -> Self {
@@ -167,7 +157,6 @@ impl Game {
             let dt = 1.0 / 60.0;
             self.collision_tiles.clear();
 
-            // What we want are rigid body dynamics.
             let mut accel = glm::vec2(0.0, 0.0);
             if input.left {
                 accel.x -= 1.0;
@@ -186,10 +175,7 @@ impl Game {
             }
             accel *= SPEED;
 
-            //console_log!("{:?}", self.player_dp);
-
             // @NOTE: "reactivity"
-            // @TODO: I really need better vectors...
             // this is a dot product or something.
             if (accel.x > 0.0 && self.player_dp.x < 0.0)
                 || (accel.x < 0.0 && self.player_dp.x > 0.0)
@@ -200,8 +186,7 @@ impl Game {
             // if input.jump && self.t - self.player_jumped_at > 1.0 {
             if input.jump && self.t - self.player_jumped_at > 0.5 {
                 accel.y += 2500.0;
-                // @TODO: maybe set input.jumped to false so we only process it once.
-                input.jump = false;
+                input.jump = false; // @TODO: better way to do this?
                 self.player_jumped_at = self.t + (dt as f64);
             }
             // @TODO: Gravity
@@ -211,40 +196,6 @@ impl Game {
                 center: self.player_p + glm::vec2(0.0, 1.0 - 0.01),
                 extent: glm::vec2(0.5 - 0.02, 1.0 - 0.02),
             };
-
-            // @NOTE: Just checking for collisions.
-            if false {
-                for (i, tile) in tile_map.iter().enumerate() {
-                    let y = (i / 32) as f32;
-                    let x = (i % 32) as f32;
-                    if *tile > 0 {
-                        let tile_geometry = Aabb {
-                            center: glm::vec2(x as f32 + 0.5, 18.0 - (y as f32 + 0.5)),
-                            extent: glm::vec2(0.5, 0.5),
-                        };
-
-                        let a = &player_geometry;
-                        let b = &tile_geometry;
-                        let collides = if ((a.center.x - b.center.x).abs()
-                            > (a.extent.x + b.extent.x))
-                            || ((a.center.y - b.center.y).abs() > (a.extent.y + b.extent.y))
-                        {
-                            false
-                        } else {
-                            true
-                        };
-
-                        if collides {
-                            //new_dp = glm::vec2(0.0, 0.0);
-                            //self.collision_tiles.push((x as usize, y as usize));
-                            //console_log!("collision: ({},{})", x, y);
-                        }
-                    }
-                }
-            }
-
-            // The problem, Is I want to calculate everything based on max jump height and speed.
-            // I need to calculate friction into that though, which is harder. I'm very bad at this.
             let mut new_dp = accel * dt + self.player_dp;
             new_dp = new_dp / (1.0 + FRICTION * dt);
 
@@ -256,7 +207,6 @@ impl Game {
                 self.player_dp.x = -MAX_SPEED;
             }
 
-            //let mut ray_o = self.player_p; // origin of ray
             let mut new_p = 0.5 * accel * (dt * dt) + self.player_dp * dt + self.player_p;
             let mut ray = new_p - self.player_p; // maybe / dt_remaining
             if ray.magnitude() > 0.0 {
@@ -264,12 +214,7 @@ impl Game {
                 ray = ray.normalize() * magnitude;
             }
 
-            //assert_eq!(ray_o + ray_d * dt_remaining, new_p);
-
-            //self.debug_ray = glm::vec2(ray_d.x, ray_d.y);
-
             let mut dt_remaining = dt;
-
             'time: while dt_remaining > 0.0 {
                 let mut min_hit_t = std::f32::INFINITY;
                 let mut hit_plane = glm::vec2(0.0, 0.0);
@@ -334,9 +279,10 @@ impl Game {
                     should_break = true;
                 }
 
-                // here we can maybe see if we hit anything else?
+                // Here we can maybe see if we hit anything else.
                 let ray = moved_to - moved_from;
 
+                // @TODO: How can I drop the orb?
                 if let Some(room_entities) = self
                     .world
                     .room_entities
@@ -363,6 +309,7 @@ impl Game {
 
             self.player_dp = accel * dt + self.player_dp;
 
+            // @NOTE: Screen scrolling.
             if self.player_p.x > 32.0 {
                 self.player_room_x += 1;
                 self.player_p.x -= 32.0
@@ -403,17 +350,17 @@ impl Game {
                 let x = i % 32;
                 if *tile > 0 {
                     let mut color = match tile {
-                        1 => Color::Brown,
-                        2 => Color::LightGreen,
-                        3 => Color::LightBlue,
-                        _ => Color::DarkGray,
+                        1 => Color::Red,
+                        2 => Color::Green,
+                        3 => Color::Blue,
+                        _ => Color::Rock,
                     };
 
-                    for (colx, coly) in &renderer.collision_tiles {
-                        if *colx == x && *coly == y {
-                            color = Color::Red;
-                        }
-                    }
+                    // for (colx, coly) in &renderer.collision_tiles {
+                    //     if *colx == x && *coly == y {
+                    //         color = Color::DebugPink;
+                    //     }
+                    // }
 
                     renderer.rect(
                         glm::vec2(x as f32 + 0.5, 18.0 - (y as f32 + 0.5)),
@@ -430,9 +377,9 @@ impl Game {
             {
                 for orb in room_entities {
                     let color = match orb.level {
-                        1 => Color::Brown,
-                        2 => Color::LightGreen,
-                        3 => Color::LightBlue,
+                        1 => Color::Red,
+                        2 => Color::Green,
+                        3 => Color::Blue,
                         _ => Color::Black,
                     };
                     renderer.rect(orb.pos, glm::vec2(0.5, 0.5), color);
@@ -440,34 +387,32 @@ impl Game {
             }
 
             // Player
-            // @TODO: Use remaining dt for this.
-            //console_log!("player: ({},{})", self.player_p.x, self.player_p.y);
             let player_p = self.player_p + self.player_dp * dt_remaining;
 
             renderer.rect(
                 player_p + glm::vec2(0.0, 1.0),
                 glm::vec2(0.5, 1.0),
-                Color::Green,
+                Color::LightBlue,
             );
             if self.player_can_pass > 0 {
                 renderer.rect(
                     player_p + glm::vec2(0.0, 1.0) + glm::vec2(0.0, 1.0),
                     glm::vec2(0.4, 0.25),
-                    Color::Brown,
+                    Color::Red,
                 );
             }
             if self.player_can_pass > 1 {
                 renderer.rect(
                     player_p + glm::vec2(0.0, 1.0) + glm::vec2(0.0, 1.25),
                     glm::vec2(0.3, 0.25),
-                    Color::LightGreen,
+                    Color::Green,
                 );
             }
             if self.player_can_pass > 2 {
                 renderer.rect(
                     player_p + glm::vec2(0.0, 1.0) + glm::vec2(0.0, 1.5),
                     glm::vec2(0.2, 0.25),
-                    Color::LightBlue,
+                    Color::Blue,
                 );
             }
         }
@@ -615,14 +560,25 @@ impl Platform {
         for rect in &self.renderer.rects {
             self.ctx.save();
             // @TODO: Cache these don't make strings every frame.
+            // https://lospec.com/palette-list/copper-tech
             match &rect.color {
-                Color::Brown => self.ctx.set_fill_style(&JsValue::from_str("yellow")),
-                Color::LightGreen => self.ctx.set_fill_style(&JsValue::from_str("red")),
-                Color::LightBlue => self.ctx.set_fill_style(&JsValue::from_str("blue")),
-                Color::Black => self.ctx.set_fill_style(&JsValue::from_str("black")),
-                Color::DarkGray => self.ctx.set_fill_style(&JsValue::from_str("darkgray")),
-                Color::Green => self.ctx.set_fill_style(&JsValue::from_str("green")),
-                Color::Red => self.ctx.set_fill_style(&JsValue::from_str("red")),
+                Color::DebugPink => self.ctx.set_fill_style(&JsValue::from_str("pink")),
+                Color::Black => self.ctx.set_fill_style(&JsValue::from_str("#000000")),
+                Color::DarkPurple => self.ctx.set_fill_style(&JsValue::from_str("#262144")),
+                Color::DarkBlue => self.ctx.set_fill_style(&JsValue::from_str("#355278")),
+                Color::DarkGray => self.ctx.set_fill_style(&JsValue::from_str("#60748a")),
+                Color::Gray => self.ctx.set_fill_style(&JsValue::from_str("#898989")),
+                Color::MediumBlue => self.ctx.set_fill_style(&JsValue::from_str("#5aa8b2")),
+                Color::LightBlue => self.ctx.set_fill_style(&JsValue::from_str("#91d9f3")),
+                Color::White => self.ctx.set_fill_style(&JsValue::from_str("#ffffff")),
+                Color::LightSand => self.ctx.set_fill_style(&JsValue::from_str("#f4cd72")),
+                Color::MediumSand => self.ctx.set_fill_style(&JsValue::from_str("#bfb588")),
+                Color::DarkSand => self.ctx.set_fill_style(&JsValue::from_str("#c58843")),
+                Color::Rock => self.ctx.set_fill_style(&JsValue::from_str("#9e5b47")),
+                Color::DarkRock => self.ctx.set_fill_style(&JsValue::from_str("#5f4351")),
+                Color::Red => self.ctx.set_fill_style(&JsValue::from_str("#dc392d")),
+                Color::Green => self.ctx.set_fill_style(&JsValue::from_str("#6ea92c")),
+                Color::Blue => self.ctx.set_fill_style(&JsValue::from_str("#1651dd")),
             };
 
             let x = (rect.world_center.x - rect.world_extent.x) as f64 * ts;
