@@ -145,7 +145,7 @@ const FRICTION: f32 = 10.0;
 impl Game {
     pub fn new() -> Self {
         Self {
-            mode: GameMode::ViewingTheMap, //GameMode::Playing,
+            mode: GameMode::Playing, //GameMode::ViewingTheMap,
             world: map::World::new(),
             t: 0.0,
             player_room_x: 0,
@@ -404,22 +404,20 @@ impl Game {
         if self.mode == GameMode::ViewingTheMap {
             // Draw out the map.
             for ((x, y), _room) in &self.world.rooms {
-                if let Some(level) = self.world.room_levels.get(&(*x, *y)) {
-                    let outer_color = Color::DebugPink;
-                    // let outer_color = match level {
-                    //     0 => Color::Rock,
-                    //     1 => Color::Red,
-                    //     2 => Color::Green,
-                    //     3 => Color::Blue,
-                    //     _ => Color::Black,
-                    // };
+                let outer_color = Color::DebugPink;
+                // let outer_color = match level {
+                //     0 => Color::Rock,
+                //     1 => Color::Red,
+                //     2 => Color::Green,
+                //     3 => Color::Blue,
+                //     _ => Color::Black,
+                // };
 
-                    renderer.rect(
-                        glm::vec2((*x as f32) + 16.0, (*y as f32) + 9.0),
-                        glm::vec2(0.5, 0.5),
-                        outer_color,
-                    );
-                }
+                renderer.rect(
+                    glm::vec2((*x as f32) + 16.0, (*y as f32) + 9.0),
+                    glm::vec2(0.5, 0.5),
+                    outer_color,
+                );
 
                 renderer.rect(
                     glm::vec2((*x as f32) + 16.0, (*y as f32) + 9.0),
@@ -438,7 +436,7 @@ impl Game {
                 }
             }
 
-            for (((x1, y1), (x2, y2)), door) in &self.world.room_doors {
+            for (((x1, y1), (x2, y2)), door) in &self.world.doors {
                 let door_color = match door {
                     0 => Color::Rock,
                     1 => Color::Red,
