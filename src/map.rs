@@ -35,6 +35,7 @@ pub struct World {
     pub rooms: HashMap<(i32, i32), [u8; 32 * 18]>,
     pub room_entities: HashMap<(i32, i32), Vec<Orb>>,
     pub room_levels: HashMap<(i32, i32), u8>,
+    pub room_doors: HashMap<((i32, i32), (i32, i32)), u8>,
 }
 
 impl World {
@@ -48,6 +49,13 @@ impl World {
         // then we can use that kind of door on future fills.
         // at the end is the anti sun.
         // this will make an extremely shitty but functional map.
+
+        // So
+        // Generate rooms, just the grid we'll use.
+        // Generate doors between the rooms. Use the powerups somehow.
+        // Build the map.
+
+        // Lets start with a static map.
 
         let mut rooms = HashMap::new();
         rooms.insert((0, 0), 0);
@@ -63,6 +71,8 @@ impl World {
                 level: 1,
             }],
         );
+
+        let mut room_doors = HashMap::new();
 
         // somehow pick a tile on the boarder.
         // @NOTE: making it easier again, just doing x!
@@ -102,6 +112,7 @@ impl World {
 
             if let Some(next_room_level) = rooms.get(&(x - 1, *y)) {
                 let door = u8::max(*room_level, *next_room_level);
+                room_doors.insert(((*x - 1, *y), (*x, *y)), door);
                 // add door to the left
                 new_room[32 * 14] = door;
                 new_room[32 * 15] = door;
@@ -109,6 +120,7 @@ impl World {
             }
             if let Some(next_room_level) = rooms.get(&(x + 1, *y)) {
                 let door = u8::max(*room_level, *next_room_level);
+                room_doors.insert(((*x, *y), (*x + 1, *y)), door);
                 // add door to the right
                 new_room[32 * 14 + 31] = door;
                 new_room[32 * 15 + 31] = door;
@@ -130,6 +142,8 @@ impl World {
             map.insert((*x, *y), new_room);
         }
 
+        room_doors.insert(((0, 0), (0, 1)), 3);
+
         // rooms.insert((0, 0), STANDARD_ROOM);
         // rooms.insert((1, 0), NEXT_ROOM);
         // rooms.insert((1, 1), ABOVE_ROOM);
@@ -140,6 +154,7 @@ impl World {
             rooms: map,
             room_entities,
             room_levels: rooms,
+            room_doors,
         }
     }
 }

@@ -145,7 +145,7 @@ const FRICTION: f32 = 10.0;
 impl Game {
     pub fn new() -> Self {
         Self {
-            mode: GameMode::Playing,
+            mode: GameMode::ViewingTheMap, //GameMode::Playing,
             world: map::World::new(),
             t: 0.0,
             player_room_x: 0,
@@ -405,13 +405,14 @@ impl Game {
             // Draw out the map.
             for ((x, y), _room) in &self.world.rooms {
                 if let Some(level) = self.world.room_levels.get(&(*x, *y)) {
-                    let outer_color = match level {
-                        0 => Color::Rock,
-                        1 => Color::Red,
-                        2 => Color::Green,
-                        3 => Color::Blue,
-                        _ => Color::Black,
-                    };
+                    let outer_color = Color::DebugPink;
+                    // let outer_color = match level {
+                    //     0 => Color::Rock,
+                    //     1 => Color::Red,
+                    //     2 => Color::Green,
+                    //     3 => Color::Blue,
+                    //     _ => Color::Black,
+                    // };
 
                     renderer.rect(
                         glm::vec2((*x as f32) + 16.0, (*y as f32) + 9.0),
@@ -433,6 +434,29 @@ impl Game {
                         glm::vec2((*x as f32) + 16.0, (*y as f32) + 9.0),
                         glm::vec2(0.25, 0.25),
                         color,
+                    );
+                }
+            }
+
+            for (((x1, y1), (x2, y2)), door) in &self.world.room_doors {
+                let door_color = match door {
+                    0 => Color::Rock,
+                    1 => Color::Red,
+                    2 => Color::Green,
+                    3 => Color::Blue,
+                    _ => Color::Black,
+                };
+                if x1 == x2 {
+                    renderer.rect(
+                        glm::vec2((*x1 as f32) + 16.0, (*y1 as f32) + 9.5),
+                        glm::vec2(0.2, 0.2),
+                        door_color,
+                    );
+                } else {
+                    renderer.rect(
+                        glm::vec2((*x1 as f32) + 16.5, (*y1 as f32) + 9.0),
+                        glm::vec2(0.2, 0.2),
+                        door_color,
                     );
                 }
             }
