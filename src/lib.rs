@@ -16,6 +16,10 @@
 
 // Do I program the double jump first? Should I do double jump or super jump?
 
+// zeeshan sent me a really dope paper on precedural level generation
+// http://www.is.ovgu.de/is_media/Master+und+Bachelor_Arbeiten/MasterThesis_JensDieskau-p-2680.pdf
+// Gotta check it out and see if it helps. It has some mcts shit going on which is super interesting!
+
 extern crate nalgebra_glm as glm; // @TODO: Probably just write this ourselves.
 
 use std::f64;

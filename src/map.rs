@@ -64,18 +64,18 @@ impl World {
         let mut min_x = 0;
         let mut max_x = 0;
 
-        for x in -5..=5 {
-            for y in -5..=5 {
+        for x in -3..=3 {
+            for y in -3..=3 {
                 rooms.insert((x, y), EMPTY_ROOM);
             }
         }
 
-        for x in -5..=5 {
-            for y in -5..=5 {
-                if x != 5 {
+        for x in -3..=3 {
+            for y in -3..=3 {
+                if x != 3 {
                     doors.insert(((x, y), (x + 1, y)), 1);
                 }
-                if y != 5 {
+                if y != 3 {
                     doors.insert(((x, y), (x, y + 1)), 1);
                 }
             }
