@@ -3,7 +3,7 @@
 
 // I sort of think I should fix jump first.
 // Jump at and a timer and checking if I'm on the ground.
-
+use js_sys;
 use std::collections::HashMap;
 
 pub struct Orb {
@@ -60,26 +60,162 @@ impl World {
         let mut room_entities = HashMap::new();
         let mut doors = HashMap::new();
 
+        // walk around at different levels?
+        // @TODO: Not portable.
+        enum Move {
+            UP,
+            DOWN,
+            LEFT,
+            RIGHT,
+        }
+
+        fn move_to(x: &mut i32, y: &mut i32, step: Move) {
+            match step {
+                Move::UP => *y -= 1,
+                Move::DOWN => *y += 1,
+                Move::LEFT => *x -= 1,
+                Move::RIGHT => *x += 1,
+            };
+        }
+
+        let steps = 5;
+
         rooms.insert((0, 0), EMPTY_ROOM);
-        let mut min_x = 0;
-        let mut max_x = 0;
 
-        for x in -3..=3 {
-            for y in -3..=3 {
-                rooms.insert((x, y), EMPTY_ROOM);
+        let room_e = room_entities.entry((0, 0)).or_insert(vec![]);
+        room_e.push(Orb {
+            pos: glm::vec2(3.0, 3.0),
+            level: 1,
+        });
+
+        let mut pos_x = 0;
+        let mut pos_y = 0;
+        for step in 0..steps {
+            // This is totally not right.
+            let f = f64::round(js_sys::Math::random() * 4.0);
+            let dir = match f {
+                0.0 => Move::UP,
+                1.0 => Move::DOWN,
+                2.0 => Move::LEFT,
+                3.0 => Move::RIGHT,
+                _ => Move::RIGHT,
+            };
+            let prev_x = pos_x;
+            let prev_y = pos_y;
+
+            move_to(&mut pos_x, &mut pos_y, dir);
+            rooms.insert((pos_x, pos_y), EMPTY_ROOM);
+
+            // this is hacky but they either have matching x's or matching y's so this works for now
+            doors.insert(
+                (
+                    (i32::min(prev_x, pos_x), i32::min(prev_y, pos_y)),
+                    (i32::max(prev_x, pos_x), i32::max(prev_y, pos_y)),
+                ),
+                1,
+            );
+        }
+
+        let room_e = room_entities.entry((pos_x, pos_y)).or_insert(vec![]);
+        room_e.push(Orb {
+            pos: glm::vec2(3.0, 3.0),
+            level: 2,
+        });
+
+        pos_x = 0;
+        pos_y = 0;
+        for step in 0..steps {
+            // This is totally not right.
+            let f = f64::round(js_sys::Math::random() * 4.0);
+            let dir = match f {
+                0.0 => Move::UP,
+                1.0 => Move::DOWN,
+                2.0 => Move::LEFT,
+                3.0 => Move::RIGHT,
+                _ => Move::RIGHT,
+            };
+            let prev_x = pos_x;
+            let prev_y = pos_y;
+
+            move_to(&mut pos_x, &mut pos_y, dir);
+            rooms.insert((pos_x, pos_y), EMPTY_ROOM);
+
+            // this is hacky but they either have matching x's or matching y's so this works for now
+            if !doors.contains_key(&(
+                (i32::min(prev_x, pos_x), i32::min(prev_y, pos_y)),
+                (i32::max(prev_x, pos_x), i32::max(prev_y, pos_y)),
+            )) {
+                doors.insert(
+                    (
+                        (i32::min(prev_x, pos_x), i32::min(prev_y, pos_y)),
+                        (i32::max(prev_x, pos_x), i32::max(prev_y, pos_y)),
+                    ),
+                    2,
+                );
             }
         }
 
-        for x in -3..=3 {
-            for y in -3..=3 {
-                if x != 3 {
-                    doors.insert(((x, y), (x + 1, y)), 1);
-                }
-                if y != 3 {
-                    doors.insert(((x, y), (x, y + 1)), 1);
-                }
+        let room_e = room_entities.entry((pos_x, pos_y)).or_insert(vec![]);
+        room_e.push(Orb {
+            pos: glm::vec2(3.0, 3.0),
+            level: 3,
+        });
+
+        pos_x = 0;
+        pos_y = 0;
+        for step in 0..steps {
+            // This is totally not right.
+            let f = f64::round(js_sys::Math::random() * 4.0);
+            let dir = match f {
+                0.0 => Move::UP,
+                1.0 => Move::DOWN,
+                2.0 => Move::LEFT,
+                3.0 => Move::RIGHT,
+                _ => Move::RIGHT,
+            };
+            let prev_x = pos_x;
+            let prev_y = pos_y;
+
+            move_to(&mut pos_x, &mut pos_y, dir);
+            rooms.insert((pos_x, pos_y), EMPTY_ROOM);
+
+            // this is hacky but they either have matching x's or matching y's so this works for now
+            if !doors.contains_key(&(
+                (i32::min(prev_x, pos_x), i32::min(prev_y, pos_y)),
+                (i32::max(prev_x, pos_x), i32::max(prev_y, pos_y)),
+            )) {
+                doors.insert(
+                    (
+                        (i32::min(prev_x, pos_x), i32::min(prev_y, pos_y)),
+                        (i32::max(prev_x, pos_x), i32::max(prev_y, pos_y)),
+                    ),
+                    3,
+                );
             }
         }
+
+        let room_e = room_entities.entry((pos_x, pos_y)).or_insert(vec![]);
+        room_e.push(Orb {
+            pos: glm::vec2(3.0, 3.0),
+            level: 4,
+        });
+
+        // for x in -3..=3 {
+        //     for y in -3..=3 {
+        //         rooms.insert((x, y), EMPTY_ROOM);
+        //     }
+        // }
+
+        // for x in -3..=3 {
+        //     for y in -3..=3 {
+        //         if x != 3 {
+        //             doors.insert(((x, y), (x + 1, y)), 1);
+        //         }
+        //         if y != 3 {
+        //             doors.insert(((x, y), (x, y + 1)), 1);
+        //         }
+        //     }
+        // }
 
         let room_e = room_entities.entry((0, 0)).or_insert(vec![]);
         room_e.push(Orb {
