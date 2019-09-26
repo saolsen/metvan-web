@@ -652,7 +652,6 @@ impl Platform {
             self.game.update(&mut self.input);
         }
         self.dt = dt;
-        self.last_t = t;
         self.input.jump = false;
 
         self.game.render(dt as f32, &mut self.renderer);
@@ -723,6 +722,25 @@ impl Platform {
         }
 
         self.ctx.restore();
+
+        //self.ctx.text("Hello World");
+        let mut y = 1.5 * ts;
+        self.ctx
+            .set_font(&format!("{}px Georgia", (ts / 2.0) as i32));
+        self.ctx.fill_text("Debug text can go here.", ts, y)?;
+        y += ts / 2.0;
+        self.ctx.fill_text(
+            &format!(
+                "fps: {}, ms per frame: {}",
+                f64::round(1000.0 / (t - self.last_t)),
+                t - self.last_t
+            ),
+            ts,
+            y,
+        )?;
+        console_log!("{}", ts);
+
+        self.last_t = t;
 
         Ok(())
     }

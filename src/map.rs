@@ -163,7 +163,7 @@ impl World {
 
         pos_x = 0;
         pos_y = 0;
-        for step in 0..steps {
+        for _step in 0..steps {
             // This is totally not right.
             let f = f64::round(js_sys::Math::random() * 4.0);
             let dir = match f {
