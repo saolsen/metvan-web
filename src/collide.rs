@@ -11,7 +11,6 @@ pub fn sweep_aabb(a: &Aabb, b: &Aabb, ray: &glm::Vec2, dt: f32) -> SweepResult {
     let mut hit = false;
     let mut hit_time = std::f32::INFINITY;
     let mut hit_normal = glm::vec2(0.0, 0.0);
-    
     let minkowski_extent = a.extent + b.extent;
     let min = b.center - minkowski_extent;
     let max = b.center + minkowski_extent;
@@ -77,5 +76,19 @@ pub fn sweep_aabb(a: &Aabb, b: &Aabb, ray: &glm::Vec2, dt: f32) -> SweepResult {
         }
     }
 
-    SweepResult{hit, hit_time, hit_normal}
+    SweepResult {
+        hit,
+        hit_time,
+        hit_normal,
+    }
+}
+
+pub fn test_aabb(a: &Aabb, b: &Aabb) -> bool {
+    if ((a.center.x - b.center.x).abs() > (a.extent.x + b.extent.x))
+        || ((a.center.y - b.center.y).abs() > (a.extent.y + b.extent.y))
+    {
+        false
+    } else {
+        true
+    }
 }

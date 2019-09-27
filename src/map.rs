@@ -1,3 +1,6 @@
+// emscripten dawg, emscripten!
+// I really do want my own c shit with memory management and stuff.
+
 // What's the best way to start out the levels? Is it to design some levels manually?
 // Is it to do something else? Powerups or a goal or something?
 

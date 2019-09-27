@@ -31,7 +31,7 @@ mod collide;
 mod map;
 mod platform;
 
-use collide::{sweep_aabb, SweepResult};
+use collide::{sweep_aabb, test_aabb, SweepResult};
 use platform::Key;
 
 const TICK: f64 = 1.0 / 60.0;
@@ -123,9 +123,12 @@ pub struct Game {
     player_room_x: i32,
     player_room_y: i32,
 
+    player_pressed_jump_at: f64,
     player_jumped_at: f64,
     player_p: glm::Vec2,
     player_dp: glm::Vec2,
+    player_grounded: bool,
+    player_last_grounded: f64, // Dunno if this would be quite right.
 
     player_can_pass: u8,
 
@@ -154,7 +157,10 @@ impl Game {
             t: 0.0,
             player_room_x: 0,
             player_room_y: 0,
+            player_pressed_jump_at: 0.0,
             player_jumped_at: 0.0,
+            player_grounded: false,
+            player_last_grounded: 0.0,
             player_p: glm::vec2(5.1, 8.1),
             player_dp: glm::vec2(0.0, 0.0),
             player_can_pass: 0,
@@ -211,12 +217,19 @@ impl Game {
             {
                 accel.x += accel.x * 0.5; // reactivity percent
             }
-            // @NOTE: Not the way to do this. Probably check landings and stuff.
-            // if input.jump && self.t - self.player_jumped_at > 1.0 {
-            if input.jump && self.t - self.player_jumped_at > 0.5 {
-                accel.y += 2500.0;
+
+            if input.jump {
+                self.player_pressed_jump_at = self.t;
                 input.jump = false; // @TODO: better way to do this?
+            }
+            // @NOTE: Not the way to do this. Probably check landings and stuff.
+            if (self.t - self.player_pressed_jump_at < 0.15)
+                && (self.player_grounded || self.t - self.player_last_grounded < 0.15)
+            {
+                accel.y += 2500.0;
+                self.player_pressed_jump_at = 0.0;
                 self.player_jumped_at = self.t + (dt as f64);
+                self.player_last_grounded = 0.0;
             }
             // @TODO: Gravity
             if self.player_can_pass < 4 {
@@ -390,8 +403,42 @@ impl Game {
                     self.player_p.y = 0.0
                 }
             }
-            // @TODO: Everything
+
             self.t += TICK;
+
+            // @Q: Should checking for groundedness happen before moving or after?
+            let feet_geometry = Aabb {
+                center: self.player_p,
+                extent: glm::vec2(0.5, 0.1),
+            };
+            let ray = glm::vec2(0.0, 0.0); // @Q: Does this work?
+
+            let mut grounded = false;
+
+            // @TODO: When I loop tiles I need to only loop tiles by the player.
+            // This probably means I want to store them in a different way.
+            for (i, tile) in tile_map.iter().enumerate() {
+                let tile_y = (i / 32) as f32;
+                let tile_x = (i % 32) as f32;
+                if *tile > self.player_can_pass {
+                    let tile_geometry = Aabb {
+                        center: glm::vec2(tile_x as f32 + 0.5, 18.0 - (tile_y as f32 + 0.5)),
+                        extent: glm::vec2(0.5, 0.5),
+                    };
+                    let hit = test_aabb(&feet_geometry, &tile_geometry);
+
+                    if hit {
+                        grounded = true;
+                        break;
+                    }
+                }
+            }
+            if grounded {
+                self.player_grounded = true;
+                self.player_last_grounded = self.t;
+            } else {
+                self.player_grounded = false;
+            }
         }
     }
 
@@ -544,6 +591,17 @@ impl Game {
                     Color::Blue,
                 );
             }
+
+            // debug collisions with ground
+            let ground_color = match self.player_grounded {
+                true => Color::DarkBlue,
+                false => Color::DebugPink,
+            };
+            renderer.rect(
+                player_p + glm::vec2(0.0, 0.0),
+                glm::vec2(0.5, 0.1),
+                ground_color,
+            );
         }
     }
 }
@@ -723,11 +781,11 @@ impl Platform {
 
         self.ctx.restore();
 
-        //self.ctx.text("Hello World");
+        let x = ts;
         let mut y = 1.5 * ts;
         self.ctx
             .set_font(&format!("{}px Georgia", (ts / 2.0) as i32));
-        self.ctx.fill_text("Debug text can go here.", ts, y)?;
+        self.ctx.fill_text("Debug text can go here.", x, y)?;
         y += ts / 2.0;
         self.ctx.fill_text(
             &format!(
@@ -735,10 +793,9 @@ impl Platform {
                 f64::round(1000.0 / (t - self.last_t)),
                 t - self.last_t
             ),
-            ts,
+            x,
             y,
         )?;
-        console_log!("{}", ts);
 
         self.last_t = t;
 
