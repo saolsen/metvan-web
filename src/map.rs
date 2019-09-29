@@ -628,21 +628,21 @@ impl World {
                 room[16] = *door;
                 room[17] = *door;
                 // We also need to be able to get up there.
-                // room[32 * 1 + 13] = 4;
-                // room[32 * 2 + 14] = 4;
+                room[32 * 1 + 13] = 4;
+                room[32 * 2 + 14] = 4;
 
-                // room[32 * 5 + 13] = 4;
-                // room[32 * 5 + 14] = 4;
-                // room[32 * 5 + 15] = 4;
-                // room[32 * 5 + 16] = 4;
+                room[32 * 5 + 13] = 4;
+                room[32 * 5 + 14] = 4;
+                room[32 * 5 + 15] = 4;
+                room[32 * 5 + 16] = 4;
 
-                // room[32 * 9 + 9] = 4;
-                // room[32 * 9 + 10] = 4;
-                // room[32 * 9 + 11] = 4;
+                room[32 * 9 + 9] = 4;
+                room[32 * 9 + 10] = 4;
+                room[32 * 9 + 11] = 4;
 
-                // room[32 * 13 + 5] = 4;
-                // room[32 * 13 + 6] = 4;
-                // room[32 * 13 + 7] = 4;
+                room[32 * 13 + 5] = 4;
+                room[32 * 13 + 6] = 4;
+                room[32 * 13 + 7] = 4;
             }
             // Bottom
             if let Some(door) = doors.get(&((x, y - 1), (x, y))) {
