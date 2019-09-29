@@ -422,7 +422,7 @@ impl Game {
                 if *tile > self.player_can_pass {
                     let tile_geometry = Aabb {
                         center: glm::vec2(tile_x as f32 + 0.5, 18.0 - (tile_y as f32 + 0.5)),
-                        extent: glm::vec2(0.5, 0.5),
+                        extent: glm::vec2(0.4, 0.5),
                     };
                     let hit = test_aabb(&feet_geometry, &tile_geometry);
 
@@ -598,7 +598,7 @@ impl Game {
             };
             renderer.rect(
                 player_p + glm::vec2(0.0, 0.0),
-                glm::vec2(0.5, 0.1),
+                glm::vec2(0.4, 0.1),
                 ground_color,
             );
         }
