@@ -222,7 +222,6 @@ impl Game {
                 self.player_pressed_jump_at = self.t;
                 input.jump = false; // @TODO: better way to do this?
             }
-            // @NOTE: Not the way to do this. Probably check landings and stuff.
             if (self.t - self.player_pressed_jump_at < 0.15)
                 && (self.player_grounded || self.t - self.player_last_grounded < 0.15)
             {
@@ -297,7 +296,7 @@ impl Game {
                 if min_hit_t < std::f32::INFINITY {
                     dt_remaining -= min_hit_t;
                     moved_from = self.player_p;
-                    self.player_p = self.player_p + ray * (min_hit_t - 0.001);
+                    self.player_p = self.player_p + ray * (min_hit_t - 0.0001);
                     moved_to = self.player_p;
 
                     if hit_plane.x != 0.0 {
