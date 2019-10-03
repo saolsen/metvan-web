@@ -134,6 +134,8 @@ pub struct Game {
 
     collision_tiles: Vec<(usize, usize)>,
     debug_ray: glm::Vec2,
+
+    initialized: bool,
 }
 
 // @TODO: Friction and jump aren't data driven yet.
@@ -157,15 +159,16 @@ impl Game {
             t: 0.0,
             player_room_x: 0,
             player_room_y: 0,
-            player_pressed_jump_at: 0.0,
+            player_pressed_jump_at: -99.0,
             player_jumped_at: 0.0,
             player_grounded: false,
             player_last_grounded: 0.0,
-            player_p: glm::vec2(5.1, 8.1),
+            player_p: glm::vec2(0.0, 0.0),
             player_dp: glm::vec2(0.0, 0.0),
             player_can_pass: 0,
             collision_tiles: vec![],
             debug_ray: glm::vec2(0.0, 0.0),
+            initialized: false,
         }
     }
 
@@ -175,6 +178,11 @@ impl Game {
             .rooms
             .get(&(self.player_room_x, self.player_room_y))
         {
+            if !self.initialized {
+                self.player_p = self.world.spawn_point;
+                self.initialized = true;
+            }
+
             if input.view_map {
                 match self.mode {
                     GameMode::Playing => self.mode = GameMode::ViewingTheMap,
@@ -218,6 +226,8 @@ impl Game {
                 accel.x += accel.x * 0.5; // reactivity percent
             }
 
+            // @BUG: Player jumps as soon as they're loaded.
+
             if input.jump {
                 self.player_pressed_jump_at = self.t;
                 input.jump = false; // @TODO: better way to do this?
@@ -230,11 +240,11 @@ impl Game {
                 self.player_jumped_at = self.t + (dt as f64);
                 self.player_last_grounded = 0.0;
             }
+
             // @TODO: Gravity
             if self.player_can_pass < 4 {
                 accel.y -= 100.0;
             }
-
             let player_geometry = Aabb {
                 center: self.player_p + glm::vec2(0.0, 1.0 - 0.01),
                 extent: glm::vec2(0.5 - 0.02, 1.0 - 0.02),
