@@ -17,4 +17,4 @@ typedef double f64;
 
 // size_t is 32 bits in wasm but we'll still just use size_t.
 
-int test() { return 69; }
+int test() { return 420; }
