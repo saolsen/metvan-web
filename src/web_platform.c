@@ -6,9 +6,6 @@
 
 // Called after growing the memory buffer so js typed array wrappers stay up to
 // date.
-extern void js_resetMemoryViews();
-extern void js_echoInt(int i);
-
 typedef uint8_t u8;
 typedef uint32_t u32;
 typedef uint64_t u64;
@@ -17,6 +14,10 @@ typedef int32_t i32;
 typedef int64_t i64;
 typedef float f32;
 typedef double f64;
+
+extern void js_resetMemoryViews();
+extern void js_echoInt(int i);
+extern void js_putc(u8 c);
 
 // Arena
 #define PAGE_SIZE 65536
@@ -91,29 +92,48 @@ typedef struct {
 } GameState;
 
 typedef struct {
+    f64 world_center_x;
+    f64 world_center_y;
+    f64 world_extent_x;
+    f64 world_extent_y;
+} RenderRect;
+
+// typedef struct {
+
+// } Renderer;
+
+typedef struct {
     u8 magic;
     u32 another_thing;
     u32 *pointer_to_foo;
 
+    RenderRect render_rects[128];
+    u32 render_rects_count;
+
     GameState *gamestate;
 } Platform;
 
-EXPORT void *update_and_render(Platform *platform) {
-    // First call is initialization stuff only.
-    if (!platform) {
-        Arena _arena;
-        Platform *platform = arena_push_type(&_arena, Platform);
-        GameState *gamestate = arena_push_type(&_arena, GameState);
-        platform->gamestate = gamestate;
-        gamestate->arena = _arena;
+EXPORT void *init() {
+    Arena _arena;
+    Platform *platform = arena_push_type(&_arena, Platform);
+    GameState *gamestate = arena_push_type(&_arena, GameState);
+    platform->gamestate = gamestate;
+    gamestate->arena = _arena;
 
-        platform->magic = 99;
-        platform->another_thing = 12345;
-        platform->pointer_to_foo = arena_push_type(&gamestate->arena, u32);
-        *platform->pointer_to_foo = 222;
-        return platform;
-    }
-    js_echoInt(platform->another_thing);
-
+    platform->magic = 99;
+    platform->another_thing = 12345;
+    platform->pointer_to_foo = arena_push_type(&gamestate->arena, u32);
+    *platform->pointer_to_foo = 222;
     return platform;
+}
+
+EXPORT void update_and_render(Platform *platform) {
+    char s[11] = {'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd'};
+    for (int i = 0; i < 11; i++) {
+        js_putc(s[i]);
+    }
+    js_putc('\n');
+
+    platform->render_rects[0].world_center_x = 11;
+    platform->render_rects_count = 1;
 }

@@ -110,15 +110,36 @@ function typeGetter(type, target, offset) {
 }
 
 function typeProxy(storage, proxyType, offset) {
-    console.debug(storage);
-    console.debug(proxyType);
-    console.debug(offset);
     console.assert('kind' in proxyType);
     console.assert(typeof proxyType.kind === 'object'
         || proxyType.kind === 'array'
         || proxyType.kind === 'ptr');
     if (proxyType.kind === 'array') {
         // Array
+        let { of, count } = proxyType;
+        console.assert('kind' in of);
+        if (typeof of.kind === 'string') {
+            // Array of primitive type.
+            console.assert(of.kind in typeArrays);
+            let arrayType = typeArrays[of.kind];
+            return new arrayType(storage.buffer, offset, count); // @TODO: Test this out.
+        } else {
+            // Array of array or struct or pointers.
+            let elementSize = typeSize(of);
+            return new Proxy(storage, {
+                get(target, i, proxy) {
+                    if (i < 0 || i >= count) {
+                        console.error("Error: out of range, count is :", count, "index: ", i);
+                        return undefined;
+                    }
+                    // @TODO: array of pointers!
+                    return typeProxy(storage, of, offset + elementSize * i);
+                },
+                set(target, name, value, proxy) {
+                    return undefined;
+                }
+            });
+        }
     } else if (proxyType.kind === 'ptr') {
         // Ptr
         return typeProxy
@@ -167,12 +188,11 @@ function typeProxy(storage, proxyType, offset) {
                 } else if (type.kind === 'ptr') {
                     console.assert('to' in type);
                     let to = type.to;
-
                     let getter = typeGetters['u32'];
                     let addr = target.dataView[getter](offset + fieldOffset, true);
                     if (typeof to.kind === 'object' || to.kind === 'array' || to.kind === 'ptr') {
                         // Can't set a pointer to a struct or array or another pointer. Get it
-                        // then you can set the value.
+                        // then you can set the values individually.
                         return undefined;
                     } else if (to.kind === 'void') {
                         return undefined;
@@ -199,15 +219,23 @@ const memory = new WebAssembly.Memory({ initial: 2 });
 let platformPtr = -1;
 let platform = null;
 
+const renderRectFields = [
+    { name: "world_center_x", type: { kind: "f64" } },
+    { name: "world_center_y", type: { kind: "f64" } },
+    { name: "world_extent_x", type: { kind: "f64" } },
+    { name: "world_extent_y", type: { kind: "f64" } },
+];
+const renderRectStruct = struct("RenderRect", renderRectFields);
+
 const platformFields = [
     { name: "magic", type: { kind: "u8" } },
     { name: "another_thing", type: { kind: "u32" } },
     { name: "pointer_to_foo", type: { kind: "ptr", to: { kind: "u32" } } },
+    { name: "render_rects", type: { kind: "array", of: { kind: renderRectStruct }, count: 128 } },
+    { name: "render_rects_count", type: { kind: "u32" } },
     { name: "gamestate", type: { kind: "ptr", to: { kind: "void" } } },
 ];
-
 const platformStruct = struct("Platform", platformFields);
-console.log(platformStruct);
 
 function js_resetMemoryViews() {
     var buf = memory.buffer;
@@ -238,13 +266,21 @@ function console_log(ptr, base, more) {
     console.log(str, base, more);
 }
 
-function js_echoInt(i) { console.log("ECHO: ", i); }
+let buf = [];
+function js_putc(c) {
+    let s = String.fromCharCode(c);
+    buf.push(s);
+    if (s === "\n") {
+        console.log("[c]", buf.join(""));
+        buf.length = 0;
+    }
+}
 
 const importObj = {
     memoryBase: 0,
     env: {
         js_resetMemoryViews,
-        js_echoInt,
+        js_putc,
         memory,
     }
 };
@@ -257,7 +293,7 @@ WebAssembly.instantiateStreaming(fetch('metvan.wasm'), importObj)
         let test = exports.test;
         console.log("Test: ", test());
 
-        platformPtr = exports.update_and_render(0);
+        platformPtr = exports.init();
         console.log(platformPtr);
         js_resetMemoryViews();
 
@@ -273,9 +309,12 @@ WebAssembly.instantiateStreaming(fetch('metvan.wasm'), importObj)
 
         // fuck yeah, now we can set values.
         platform.another_thing = 666;
-        platformPtr = exports.update_and_render(platformPtr);
+        platform.pointer_to_foo = 111;
+        exports.update_and_render(platformPtr);
 
         // Get pointers working (arrays are gonna be important soon too)
+        console.log(platform.render_rects[0].world_center_x);
+        console.log(platform.render_rects[0].world_center_y);
     });
 
 
