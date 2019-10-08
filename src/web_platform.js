@@ -1,6 +1,6 @@
 const memory = new WebAssembly.Memory({ initial: 2 });
 
-function js_reset_arrays() {
+function js_resetArrays() {
     var buf = memory.buffer;
     memory.U8 = new Uint8Array(buf);
     memory.S32 = new Int32Array(buf);
@@ -9,7 +9,7 @@ function js_reset_arrays() {
     memory.F64 = new Float64Array(buf);
 }
 
-js_reset_arrays();
+js_resetArrays();
 
 function getInt(ptr) {
     return memory.S32[ptr >> 2];
@@ -30,7 +30,7 @@ function console_log(ptr, base, more) {
 const importObj = {
     memoryBase: 0,
     env: {
-        js_reset_arrays,
+        js_resetArrays,
         memory,
     }
 };
@@ -42,4 +42,13 @@ WebAssembly.instantiateStreaming(fetch('metvan.wasm'), importObj)
         console.log(exports);
         let test = exports.test;
         console.log("Test: ", test());
+
+        let platform = exports.update_and_render();
+        console.log(platform);
+
+        console.log(memory.U8[platform])
     });
+
+
+// Things I need to get this working.
+// Struct access from c.
