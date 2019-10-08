@@ -6,7 +6,8 @@
 
 // Called after growing the memory buffer so js typed array wrappers stay up to
 // date.
-extern void js_resetArrays();
+extern void js_resetMemoryViews();
+extern void js_echoInt(int i);
 
 typedef uint8_t u8;
 typedef uint32_t u32;
@@ -23,7 +24,7 @@ typedef double f64;
 extern unsigned long __builtin_wasm_memory_grow(int, unsigned long);
 void *platform_alloc_page() {
     int page = __builtin_wasm_memory_grow(0, 1);
-    js_resetArrays();
+    js_resetMemoryViews();
     return (u8 *)0 + (page * PAGE_SIZE);
 }
 
@@ -83,7 +84,7 @@ void arena_free(Arena *arena) {
 
 // End Arena
 
-EXPORT int test() { return 100; }
+EXPORT int test() { return 101; }
 
 typedef struct {
     Arena arena;
@@ -91,20 +92,28 @@ typedef struct {
 
 typedef struct {
     u8 magic;
+    u32 another_thing;
+    u32 *pointer_to_foo;
+
     GameState *gamestate;
 } Platform;
 
 EXPORT void *update_and_render(Platform *platform) {
     // First call is initialization stuff only.
     if (!platform) {
-        Arena arena;
-        Platform *platform = arena_push_type(&arena, Platform);
-        GameState *gamestate = arena_push_type(&arena, GameState);
+        Arena _arena;
+        Platform *platform = arena_push_type(&_arena, Platform);
+        GameState *gamestate = arena_push_type(&_arena, GameState);
         platform->gamestate = gamestate;
-        gamestate->arena = arena;
+        gamestate->arena = _arena;
 
         platform->magic = 99;
+        platform->another_thing = 12345;
+        platform->pointer_to_foo = arena_push_type(&gamestate->arena, u32);
+        *platform->pointer_to_foo = 222;
         return platform;
     }
+    js_echoInt(platform->another_thing);
+
     return platform;
 }
