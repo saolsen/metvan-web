@@ -1,16 +1,17 @@
+use super::vector::*;
 use super::Aabb;
 
 // @TODO: Maybe a bad name becuase it isn't a rust Result type.
 pub struct SweepResult {
     pub hit: bool,
     pub hit_time: f32,
-    pub hit_normal: glm::Vec2,
+    pub hit_normal: V2,
 }
 
-pub fn sweep_aabb(a: &Aabb, b: &Aabb, ray: &glm::Vec2, dt: f32) -> SweepResult {
+pub fn sweep_aabb(a: &Aabb, b: &Aabb, ray: &V2, dt: f32) -> SweepResult {
     let mut hit = false;
     let mut hit_time = std::f32::INFINITY;
-    let mut hit_normal = glm::vec2(0.0, 0.0);
+    let mut hit_normal = v2(0.0, 0.0);
     let minkowski_extent = a.extent + b.extent;
     let min = b.center - minkowski_extent;
     let max = b.center + minkowski_extent;
@@ -25,7 +26,7 @@ pub fn sweep_aabb(a: &Aabb, b: &Aabb, ray: &glm::Vec2, dt: f32) -> SweepResult {
                 if t < hit_time {
                     hit = true;
                     hit_time = t;
-                    hit_normal = glm::vec2(0.0, 1.0);
+                    hit_normal = v2(0.0, 1.0);
                 }
             }
         }
@@ -40,7 +41,7 @@ pub fn sweep_aabb(a: &Aabb, b: &Aabb, ray: &glm::Vec2, dt: f32) -> SweepResult {
                 if t < hit_time {
                     hit = true;
                     hit_time = t;
-                    hit_normal = glm::vec2(0.0, -1.0);
+                    hit_normal = v2(0.0, -1.0);
                 }
             }
         }
@@ -55,7 +56,7 @@ pub fn sweep_aabb(a: &Aabb, b: &Aabb, ray: &glm::Vec2, dt: f32) -> SweepResult {
                 if t < hit_time {
                     hit = true;
                     hit_time = t;
-                    hit_normal = glm::vec2(-1.0, 0.0);
+                    hit_normal = v2(-1.0, 0.0);
                 }
             }
         }
@@ -70,7 +71,7 @@ pub fn sweep_aabb(a: &Aabb, b: &Aabb, ray: &glm::Vec2, dt: f32) -> SweepResult {
                 if t < hit_time {
                     hit = true;
                     hit_time = t;
-                    hit_normal = glm::vec2(1.0, 0.0);
+                    hit_normal = v2(1.0, 0.0);
                 }
             }
         }

@@ -18,8 +18,10 @@ macro_rules! console_log {
     ($($t:tt)*) => (console::log_1(&JsValue::from_str(&format_args!($($t)*).to_string())))
 }
 
+use super::vector::*;
+
 pub struct Orb {
-    pub pos: glm::Vec2,
+    pub pos: V2,
     pub level: u8,
 }
 
@@ -437,47 +439,47 @@ pub struct World {
     pub rooms: HashMap<(i32, i32), [u8; 32 * 18]>,
     pub room_entities: HashMap<(i32, i32), Vec<Orb>>,
     pub doors: HashMap<((i32, i32), (i32, i32)), u8>,
-    pub spawn_point: glm::Vec2,
+    pub spawn_point: V2,
 }
 
 impl World {
     pub fn new() -> Self {
-        let SPAWN_POINTS: [glm::Vec2; 16] = [
-            glm::vec2(3.1, 5.1),   // 0000
-            glm::vec2(3.1, 1.1),   // 0001
-            glm::vec2(14.1, 5.1),  // 0010
-            glm::vec2(8.1, 1.1),   // 0011
-            glm::vec2(14.1, 15.1), // 0100
-            glm::vec2(8.1, 8.1),   // 0101
-            glm::vec2(15.1, 8.1),  // 0110
-            glm::vec2(8.1, 8.1),   // 0111
-            glm::vec2(14.1, 8.1),  // 1000
-            glm::vec2(8.1, 8.1),   // 1001
-            glm::vec2(8.1, 8.1),   // 1010
-            glm::vec2(8.1, 8.1),   // 1011
-            glm::vec2(8.1, 8.1),   // 1100
-            glm::vec2(8.1, 8.1),   // 1101
-            glm::vec2(8.1, 8.1),   // 1110
-            glm::vec2(8.1, 8.1),   // 1111
+        let SPAWN_POINTS: [V2; 16] = [
+            v2(3.1, 5.1),   // 0000
+            v2(3.1, 1.1),   // 0001
+            v2(14.1, 5.1),  // 0010
+            v2(8.1, 1.1),   // 0011
+            v2(14.1, 15.1), // 0100
+            v2(8.1, 8.1),   // 0101
+            v2(15.1, 8.1),  // 0110
+            v2(8.1, 8.1),   // 0111
+            v2(14.1, 8.1),  // 1000
+            v2(8.1, 8.1),   // 1001
+            v2(8.1, 8.1),   // 1010
+            v2(8.1, 8.1),   // 1011
+            v2(8.1, 8.1),   // 1100
+            v2(8.1, 8.1),   // 1101
+            v2(8.1, 8.1),   // 1110
+            v2(8.1, 8.1),   // 1111
         ];
 
-        let ORB_POINTS: [glm::Vec2; 16] = [
-            glm::vec2(16.0, 9.0),  // 0000
-            glm::vec2(5.0, 2.5),   // 0001
-            glm::vec2(16.5, 6.0),  // 0010
-            glm::vec2(15.5, 2.5),  // 0011
-            glm::vec2(16.0, 15.5), // 0100
-            glm::vec2(4.0, 2.0),   // 0101
-            glm::vec2(24.0, 8.0),  // 0110
-            glm::vec2(16.0, 9.0),  // 0111
-            glm::vec2(16.0, 2.0),  // 1000
-            glm::vec2(4.0, 2.0),   // 1001
-            glm::vec2(4.0, 2.0),   // 1010
-            glm::vec2(4.0, 2.0),   // 1011
-            glm::vec2(4.0, 2.0),   // 1100
-            glm::vec2(4.0, 2.0),   // 1101
-            glm::vec2(4.0, 2.0),   // 1110
-            glm::vec2(4.0, 2.0),   // 1111
+        let ORB_POINTS: [V2; 16] = [
+            v2(16.0, 9.0),  // 0000
+            v2(5.0, 2.5),   // 0001
+            v2(16.5, 6.0),  // 0010
+            v2(15.5, 2.5),  // 0011
+            v2(16.0, 15.5), // 0100
+            v2(4.0, 2.0),   // 0101
+            v2(24.0, 8.0),  // 0110
+            v2(16.0, 9.0),  // 0111
+            v2(16.0, 2.0),  // 1000
+            v2(4.0, 2.0),   // 1001
+            v2(4.0, 2.0),   // 1010
+            v2(4.0, 2.0),   // 1011
+            v2(4.0, 2.0),   // 1100
+            v2(4.0, 2.0),   // 1101
+            v2(4.0, 2.0),   // 1110
+            v2(4.0, 2.0),   // 1111
         ];
         // so, how do I generate a random graph with some properties?
         // pcg is fucking awesome i'm just gonna jam that after this.
@@ -557,7 +559,7 @@ impl World {
         orb_rooms.insert((pos_x, pos_y), 2);
         // let room_e = room_entities.entry((pos_x, pos_y)).or_insert(vec![]);
         // room_e.push(Orb {
-        //     pos: glm::vec2(3.0, 3.0),
+        //     pos: v2(3.0, 3.0),
         //     level: 2,
         // });
 
@@ -597,7 +599,7 @@ impl World {
         orb_rooms.insert((pos_x, pos_y), 3);
         // let room_e = room_entities.entry((pos_x, pos_y)).or_insert(vec![]);
         // room_e.push(Orb {
-        //     pos: glm::vec2(3.0, 3.0),
+        //     pos: v2(3.0, 3.0),
         //     level: 3,
         // });
 
@@ -636,7 +638,7 @@ impl World {
 
         orb_rooms.insert((pos_x, pos_y), 4);
 
-        let mut spawn_point = glm::vec2(0.0, 0.0);
+        let mut spawn_point = v2(0.0, 0.0);
 
         // Add doors
         for (&(x, y), room) in rooms.iter_mut() {
@@ -695,42 +697,42 @@ impl World {
     }
 
     pub fn debug() -> Self {
-        let SPAWN_POINTS: [glm::Vec2; 16] = [
-            glm::vec2(3.1, 5.1),   // 0000
-            glm::vec2(3.1, 1.1),   // 0001
-            glm::vec2(14.1, 5.1),  // 0010
-            glm::vec2(8.1, 1.1),   // 0011
-            glm::vec2(14.1, 15.1), // 0100
-            glm::vec2(8.1, 8.1),   // 0101
-            glm::vec2(15.1, 8.1),  // 0110
-            glm::vec2(8.1, 8.1),   // 0111
-            glm::vec2(14.1, 8.1),  // 1000
-            glm::vec2(8.1, 8.1),   // 1001
-            glm::vec2(8.1, 8.1),   // 1010
-            glm::vec2(8.1, 8.1),   // 1011
-            glm::vec2(8.1, 8.1),   // 1100
-            glm::vec2(8.1, 8.1),   // 1101
-            glm::vec2(8.1, 8.1),   // 1110
-            glm::vec2(8.1, 8.1),   // 1111
+        let SPAWN_POINTS: [V2; 16] = [
+            v2(3.1, 5.1),   // 0000
+            v2(3.1, 1.1),   // 0001
+            v2(14.1, 5.1),  // 0010
+            v2(8.1, 1.1),   // 0011
+            v2(14.1, 15.1), // 0100
+            v2(8.1, 8.1),   // 0101
+            v2(15.1, 8.1),  // 0110
+            v2(8.1, 8.1),   // 0111
+            v2(14.1, 8.1),  // 1000
+            v2(8.1, 8.1),   // 1001
+            v2(8.1, 8.1),   // 1010
+            v2(8.1, 8.1),   // 1011
+            v2(8.1, 8.1),   // 1100
+            v2(8.1, 8.1),   // 1101
+            v2(8.1, 8.1),   // 1110
+            v2(8.1, 8.1),   // 1111
         ];
 
-        let ORB_POINTS: [glm::Vec2; 16] = [
-            glm::vec2(16.0, 9.0),  // 0000
-            glm::vec2(5.0, 2.5),   // 0001
-            glm::vec2(16.5, 6.0),  // 0010
-            glm::vec2(15.5, 2.5),  // 0011
-            glm::vec2(16.0, 15.5), // 0100
-            glm::vec2(4.0, 2.0),   // 0101
-            glm::vec2(24.0, 8.0),  // 0110
-            glm::vec2(16.0, 9.0),  // 0111
-            glm::vec2(16.0, 2.0),  // 1000
-            glm::vec2(4.0, 2.0),   // 1001
-            glm::vec2(4.0, 2.0),   // 1010
-            glm::vec2(4.0, 2.0),   // 1011
-            glm::vec2(4.0, 2.0),   // 1100
-            glm::vec2(4.0, 2.0),   // 1101
-            glm::vec2(4.0, 2.0),   // 1110
-            glm::vec2(4.0, 2.0),   // 1111
+        let ORB_POINTS: [V2; 16] = [
+            v2(16.0, 9.0),  // 0000
+            v2(5.0, 2.5),   // 0001
+            v2(16.5, 6.0),  // 0010
+            v2(15.5, 2.5),  // 0011
+            v2(16.0, 15.5), // 0100
+            v2(4.0, 2.0),   // 0101
+            v2(24.0, 8.0),  // 0110
+            v2(16.0, 9.0),  // 0111
+            v2(16.0, 2.0),  // 1000
+            v2(4.0, 2.0),   // 1001
+            v2(4.0, 2.0),   // 1010
+            v2(4.0, 2.0),   // 1011
+            v2(4.0, 2.0),   // 1100
+            v2(4.0, 2.0),   // 1101
+            v2(4.0, 2.0),   // 1110
+            v2(4.0, 2.0),   // 1111
         ];
 
         let mut rooms = HashMap::new();
@@ -741,7 +743,7 @@ impl World {
 
         rooms.insert((0, 0), NULL_ROOM);
         orb_rooms.insert((0, 0), 1);
-        let mut spawn_point = glm::vec2(0.0, 0.0);
+        let mut spawn_point = v2(0.0, 0.0);
 
         // Add doors
         for (&(x, y), room) in rooms.iter_mut() {
@@ -808,7 +810,7 @@ impl World {
         //         // add an orb that activates the next level? LOL OR SOMETHING.
         //         let room_e = room_entities.entry((x, y)).or_insert(vec![]);
         //         room_e.push(Orb {
-        //             pos: glm::vec2(10.0, 3.0),
+        //             pos: v2(10.0, 3.0),
         //             level: level + 1,
         //         });
         //     }

@@ -20,8 +20,6 @@
 // http://www.is.ovgu.de/is_media/Master+und+Bachelor_Arbeiten/MasterThesis_JensDieskau-p-2680.pdf
 // Gotta check it out and see if it helps. It has some mcts shit going on which is super interesting!
 
-extern crate nalgebra_glm as glm; // @TODO: Probably just write this ourselves.
-
 use std::f64;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -30,9 +28,11 @@ use web_sys::console;
 mod collide;
 mod map;
 mod platform;
+mod vector;
 
 use collide::{sweep_aabb, test_aabb, SweepResult};
 use platform::Key;
+use vector::*;
 
 const TICK: f64 = 1.0 / 60.0;
 
@@ -42,8 +42,8 @@ macro_rules! console_log {
 
 #[derive(Debug)]
 pub struct Aabb {
-    center: glm::Vec2,
-    extent: glm::Vec2,
+    center: V2,
+    extent: V2,
 }
 
 #[derive(Debug)]
@@ -85,8 +85,8 @@ pub enum Color {
 
 #[derive(Debug)]
 pub struct RenderRect {
-    world_center: glm::Vec2,
-    world_extent: glm::Vec2,
+    world_center: V2,
+    world_extent: V2,
     color: Color,
 }
 
@@ -94,12 +94,12 @@ pub struct RenderRect {
 pub struct Renderer {
     rects: Vec<RenderRect>,
     collision_tiles: Vec<(usize, usize)>,
-    debug_ray: glm::Vec2,
+    debug_ray: V2,
 }
 
 impl Renderer {
     // Position is bottom left.
-    fn rect(&mut self, center: glm::Vec2, extent: glm::Vec2, color: Color) {
+    fn rect(&mut self, center: V2, extent: V2, color: Color) {
         self.rects.push(RenderRect {
             world_center: center,
             world_extent: extent,
@@ -125,15 +125,15 @@ pub struct Game {
 
     player_pressed_jump_at: f64,
     player_jumped_at: f64,
-    player_p: glm::Vec2,
-    player_dp: glm::Vec2,
+    player_p: V2,
+    player_dp: V2,
     player_grounded: bool,
     player_last_grounded: f64, // Dunno if this would be quite right.
 
     player_can_pass: u8,
 
     collision_tiles: Vec<(usize, usize)>,
-    debug_ray: glm::Vec2,
+    debug_ray: V2,
 
     initialized: bool,
 }
@@ -163,11 +163,11 @@ impl Game {
             player_jumped_at: 0.0,
             player_grounded: false,
             player_last_grounded: 0.0,
-            player_p: glm::vec2(0.0, 0.0),
-            player_dp: glm::vec2(0.0, 0.0),
+            player_p: v2(0.0, 0.0),
+            player_dp: v2(0.0, 0.0),
             player_can_pass: 0,
             collision_tiles: vec![],
-            debug_ray: glm::vec2(0.0, 0.0),
+            debug_ray: v2(0.0, 0.0),
             initialized: false,
         }
     }
@@ -198,7 +198,7 @@ impl Game {
             let dt = 1.0 / 60.0;
             self.collision_tiles.clear();
 
-            let mut accel = glm::vec2(0.0, 0.0);
+            let mut accel = v2(0.0, 0.0);
             if input.left {
                 accel.x -= 1.0;
             }
@@ -213,7 +213,7 @@ impl Game {
                     accel.y -= 1.0;
                 }
             }
-            if accel.magnitude() > 0.0 {
+            if accel.mag() > 0.0 {
                 accel = accel.normalize();
             }
             accel *= SPEED;
@@ -246,8 +246,8 @@ impl Game {
                 accel.y -= 100.0;
             }
             let player_geometry = Aabb {
-                center: self.player_p + glm::vec2(0.0, 1.0 - 0.01),
-                extent: glm::vec2(0.5 - 0.02, 1.0 - 0.02),
+                center: self.player_p + v2(0.0, 1.0 - 0.01),
+                extent: v2(0.5 - 0.02, 1.0 - 0.02),
             };
             let mut new_dp = accel * dt + self.player_dp;
             new_dp = new_dp / (1.0 + FRICTION * dt);
@@ -262,23 +262,23 @@ impl Game {
 
             let mut new_p = 0.5 * accel * (dt * dt) + self.player_dp * dt + self.player_p;
             let mut ray = new_p - self.player_p; // maybe / dt_remaining
-            if ray.magnitude() > 0.0 {
-                let magnitude = ray.magnitude() / dt;
+            if ray.mag() > 0.0 {
+                let magnitude = ray.mag() / dt;
                 ray = ray.normalize() * magnitude;
             }
 
             let mut dt_remaining = dt;
             'time: while dt_remaining > 0.0 {
                 let mut min_hit_t = std::f32::INFINITY;
-                let mut hit_plane = glm::vec2(0.0, 0.0);
+                let mut hit_plane = v2(0.0, 0.0);
 
                 'tiles: for (i, tile) in tile_map.iter().enumerate() {
                     let tile_y = (i / 32) as f32;
                     let tile_x = (i % 32) as f32;
                     if *tile > self.player_can_pass {
                         let tile_geometry = Aabb {
-                            center: glm::vec2(tile_x as f32 + 0.5, 18.0 - (tile_y as f32 + 0.5)),
-                            extent: glm::vec2(0.5, 0.5),
+                            center: v2(tile_x as f32 + 0.5, 18.0 - (tile_y as f32 + 0.5)),
+                            extent: v2(0.5, 0.5),
                         };
                         let SweepResult {
                             hit,
@@ -321,8 +321,8 @@ impl Game {
                         + self.player_dp * dt_remaining
                         + self.player_p;
                     ray = new_p - self.player_p;
-                    if ray.magnitude() > 0.0 {
-                        let magnitude = ray.magnitude() / dt_remaining;
+                    if ray.mag() > 0.0 {
+                        let magnitude = ray.mag() / dt_remaining;
                         ray = ray.normalize() * magnitude;
                     }
                 } else {
@@ -344,7 +344,7 @@ impl Game {
                     for orb in room_entities {
                         let orb_geometry = Aabb {
                             center: orb.pos,
-                            extent: glm::vec2(0.5, 0.5),
+                            extent: v2(0.5, 0.5),
                         };
                         let SweepResult { hit, .. } =
                             sweep_aabb(&player_geometry, &orb_geometry, &ray, 1.0);
@@ -418,9 +418,9 @@ impl Game {
             // @Q: Should checking for groundedness happen before moving or after?
             let feet_geometry = Aabb {
                 center: self.player_p,
-                extent: glm::vec2(0.5, 0.1),
+                extent: v2(0.5, 0.1),
             };
-            let ray = glm::vec2(0.0, 0.0); // @Q: Does this work?
+            let ray = v2(0.0, 0.0); // @Q: Does this work?
 
             let mut grounded = false;
 
@@ -431,8 +431,8 @@ impl Game {
                 let tile_x = (i % 32) as f32;
                 if *tile > self.player_can_pass {
                     let tile_geometry = Aabb {
-                        center: glm::vec2(tile_x as f32 + 0.5, 18.0 - (tile_y as f32 + 0.5)),
-                        extent: glm::vec2(0.4, 0.5),
+                        center: v2(tile_x as f32 + 0.5, 18.0 - (tile_y as f32 + 0.5)),
+                        extent: v2(0.4, 0.5),
                     };
                     let hit = test_aabb(&feet_geometry, &tile_geometry);
 
@@ -474,14 +474,14 @@ impl Game {
                 // };
 
                 renderer.rect(
-                    glm::vec2((*x as f32) + 16.0, (*y as f32) + 9.0),
-                    glm::vec2(0.5, 0.5),
+                    v2((*x as f32) + 16.0, (*y as f32) + 9.0),
+                    v2(0.5, 0.5),
                     outer_color,
                 );
 
                 renderer.rect(
-                    glm::vec2((*x as f32) + 16.0, (*y as f32) + 9.0),
-                    glm::vec2(0.4, 0.4),
+                    v2((*x as f32) + 16.0, (*y as f32) + 9.0),
+                    v2(0.4, 0.4),
                     Color::Gray,
                 );
 
@@ -489,8 +489,8 @@ impl Game {
                     // add the player to the room.
                     let color = Color::LightBlue;
                     renderer.rect(
-                        glm::vec2((*x as f32) + 16.0, (*y as f32) + 9.0),
-                        glm::vec2(0.25, 0.25),
+                        v2((*x as f32) + 16.0, (*y as f32) + 9.0),
+                        v2(0.25, 0.25),
                         color,
                     );
                 }
@@ -506,14 +506,14 @@ impl Game {
                 };
                 if x1 == x2 {
                     renderer.rect(
-                        glm::vec2((*x1 as f32) + 16.0, (*y1 as f32) + 9.5),
-                        glm::vec2(0.2, 0.2),
+                        v2((*x1 as f32) + 16.0, (*y1 as f32) + 9.5),
+                        v2(0.2, 0.2),
                         door_color,
                     );
                 } else {
                     renderer.rect(
-                        glm::vec2((*x1 as f32) + 16.5, (*y1 as f32) + 9.0),
-                        glm::vec2(0.2, 0.2),
+                        v2((*x1 as f32) + 16.5, (*y1 as f32) + 9.0),
+                        v2(0.2, 0.2),
                         door_color,
                     );
                 }
@@ -548,8 +548,8 @@ impl Game {
                     // }
 
                     renderer.rect(
-                        glm::vec2(x as f32 + 0.5, 18.0 - (y as f32 + 0.5)),
-                        glm::vec2(0.5, 0.5),
+                        v2(x as f32 + 0.5, 18.0 - (y as f32 + 0.5)),
+                        v2(0.5, 0.5),
                         color,
                     );
                 }
@@ -567,36 +567,32 @@ impl Game {
                         3 => Color::Blue,
                         _ => Color::Black,
                     };
-                    renderer.rect(orb.pos, glm::vec2(0.5, 0.5), color);
+                    renderer.rect(orb.pos, v2(0.5, 0.5), color);
                 }
             }
 
             // Player
             let player_p = self.player_p + self.player_dp * dt_remaining;
 
-            renderer.rect(
-                player_p + glm::vec2(0.0, 1.0),
-                glm::vec2(0.5, 1.0),
-                Color::LightBlue,
-            );
+            renderer.rect(player_p + v2(0.0, 1.0), v2(0.5, 1.0), Color::LightBlue);
             if self.player_can_pass > 0 {
                 renderer.rect(
-                    player_p + glm::vec2(0.0, 1.0) + glm::vec2(0.0, 1.0),
-                    glm::vec2(0.4, 0.25),
+                    player_p + v2(0.0, 1.0) + v2(0.0, 1.0),
+                    v2(0.4, 0.25),
                     Color::Red,
                 );
             }
             if self.player_can_pass > 1 {
                 renderer.rect(
-                    player_p + glm::vec2(0.0, 1.0) + glm::vec2(0.0, 1.25),
-                    glm::vec2(0.3, 0.25),
+                    player_p + v2(0.0, 1.0) + v2(0.0, 1.25),
+                    v2(0.3, 0.25),
                     Color::Green,
                 );
             }
             if self.player_can_pass > 2 {
                 renderer.rect(
-                    player_p + glm::vec2(0.0, 1.0) + glm::vec2(0.0, 1.5),
-                    glm::vec2(0.2, 0.25),
+                    player_p + v2(0.0, 1.0) + v2(0.0, 1.5),
+                    v2(0.2, 0.25),
                     Color::Blue,
                 );
             }
@@ -606,11 +602,7 @@ impl Game {
                 true => Color::DarkBlue,
                 false => Color::DebugPink,
             };
-            renderer.rect(
-                player_p + glm::vec2(0.0, 0.0),
-                glm::vec2(0.4, 0.1),
-                ground_color,
-            );
+            renderer.rect(player_p + v2(0.0, 0.0), v2(0.4, 0.1), ground_color);
         }
     }
 }
@@ -679,7 +671,7 @@ impl Platform {
         let renderer = Renderer {
             rects: vec![],
             collision_tiles: vec![],
-            debug_ray: glm::vec2(0.0, 0.0),
+            debug_ray: v2(0.0, 0.0),
         };
 
         Ok(Self {
