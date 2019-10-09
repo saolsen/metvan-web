@@ -219,15 +219,11 @@ const memory = new WebAssembly.Memory({ initial: 2 });
 let platformPtr = -1;
 let platform = null;
 
-const inputFields = [
-    { name: "up", type: { kind: "u32" } },
-    { name: "down", type: { kind: "u32" } },
-    { name: "left", type: { kind: "u32" } },
-    { name: "right", type: { kind: "u32" } },
-    { name: "jump", type: { kind: "u32" } },
-    { name: "view_map", type: { kind: "u32" } },
+const arenaFields = [
+    { name: "page", type: { kind: "ptr", to: { kind: "void" } } },
+    { name: "used", type: { kind: "u32" } },
 ];
-const inputStruct = struct("Input", inputFields);
+const arenaStruct = struct("Arena", arenaFields);
 
 const renderRectFields = [
     { name: "world_center_x", type: { kind: "f64" } },
@@ -238,13 +234,27 @@ const renderRectFields = [
 ];
 const renderRectStruct = struct("RenderRect", renderRectFields);
 
-const platformFields = [
-    { name: "magic", type: { kind: "u8" } },
-    { name: "another_thing", type: { kind: "u32" } },
-    { name: "pointer_to_foo", type: { kind: "ptr", to: { kind: "u32" } } },
-    { name: "input", type: { kind: inputStruct } },
+const rendererFields = [
     { name: "render_rects", type: { kind: "array", of: { kind: renderRectStruct }, count: 128 } },
     { name: "render_rects_count", type: { kind: "u32" } },
+];
+const rendererStruct = struct("Renderer", rendererFields);
+
+const inputFields = [
+    { name: "up", type: { kind: "u32" } },
+    { name: "down", type: { kind: "u32" } },
+    { name: "left", type: { kind: "u32" } },
+    { name: "right", type: { kind: "u32" } },
+    { name: "jump", type: { kind: "u32" } },
+    { name: "view_map", type: { kind: "u32" } },
+];
+const inputStruct = struct("Input", inputFields);
+
+const platformFields = [
+    { name: "arena", type: { kind: arenaStruct } },
+    { name: "renderer", type: { kind: rendererStruct } },
+    { name: "t", type: { kind: "f64" } },
+    { name: "input", type: { kind: inputStruct } },
     { name: "gamestate", type: { kind: "ptr", to: { kind: "void" } } },
 ];
 const platformStruct = struct("Platform", platformFields);
@@ -261,22 +271,6 @@ function js_resetMemoryViews() {
 }
 
 js_resetMemoryViews();
-
-function getInt(ptr) {
-    return memory.S32[ptr >> 2];
-}
-
-function getString(ptr) {
-    var start = (ptr >>>= 0);
-    while (memory.U8[ptr++]);
-    getString.bytes = ptr - start;
-    return String.fromCharCode.apply(null, memory.U8.subarray(start, ptr - 1));
-}
-
-function console_log(ptr, base, more) {
-    let str = getString(ptr);
-    console.log(str, base, more);
-}
 
 let buf = [];
 function js_putc(c) {
@@ -325,7 +319,6 @@ WebAssembly.instantiateStreaming(fetch('metvan.wasm'), importObj)
         platformPtr = exports.init();
         js_resetMemoryViews();
 
-        // record keypresses n shit urself.
         let canvas = document.getElementById("canvas");
         let ctx = canvas.getContext("2d");
         let dpr = window.devicePixelRatio;
@@ -395,9 +388,9 @@ WebAssembly.instantiateStreaming(fetch('metvan.wasm'), importObj)
             ctx.translate(0.0, height);
 
             ctx.fillRect(0, -ts, ts, ts);
-            for (let i = 0; i < platform.render_rects_count; i++) {
+            for (let i = 0; i < platform.renderer.render_rects_count; i++) {
                 ctx.save();
-                let rect = platform.render_rects[i];
+                let rect = platform.renderer.render_rects[i];
                 let color = colors[rect.color];
                 let x = (rect.world_center_x - rect.world_extent_x) * ts;
                 let y = (rect.world_center_y + rect.world_extent_y) * ts;
@@ -413,25 +406,4 @@ WebAssembly.instantiateStreaming(fetch('metvan.wasm'), importObj)
             requestAnimationFrame(renderLoop);
         }
         renderLoop();
-
-        // console.log("Magic");
-        // console.log(platform.magic);
-        // console.log("Another Thing");
-        // console.log(platform.another_thing);
-        // console.log("Pointer to foo");
-        // console.log(platform.pointer_to_foo);
-        // console.log("Pointer to gamestate");
-        // console.log(platform.gamestate);
-        // // this fuckin works!
-
-        // fuck yeah, now we can set values.
-        // platform.another_thing = 666;
-        // platform.pointer_to_foo = 111;
-
-        // console.log(platform.render_rects[0].world_center_x);
-        // console.log(platform.render_rects[0].world_center_y);
-    }).catch(console.error);;
-
-
-// Things I need to get this working.
-// Struct access from c.
+    }).catch(console.error);

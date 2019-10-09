@@ -1,27 +1,15 @@
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "arena.h"
+#include "platform.h"
 
 #define EXPORT __attribute__((used))
 
 // Called after growing the memory buffer so js typed array wrappers stay up to
 // date.
-typedef uint8_t u8;
-typedef uint32_t u32;
-typedef uint64_t u64;
-typedef int8_t i8;
-typedef int32_t i32;
-typedef int64_t i64;
-typedef float f32;
-typedef double f64;
-
 extern void js_resetMemoryViews();
 extern void js_echoInt(int i);
 extern void js_putc(u8 c);
 
 // Arena
-#define PAGE_SIZE 65536
-
 extern unsigned long __builtin_wasm_memory_grow(int, unsigned long);
 void *platform_alloc_page() {
     int page = __builtin_wasm_memory_grow(0, 1);
@@ -29,167 +17,26 @@ void *platform_alloc_page() {
     return (u8 *)0 + (page * PAGE_SIZE);
 }
 
-static void *platform_free_pages = NULL;
-
-typedef struct PageFooter {
-    struct PageFooter *prev;
-} PageFooter;
-
-typedef struct {
-    void *page;
-    size_t used;
-} Arena;
-
-#define arena_push_type(a, t) (t *)arena_push_size(a, sizeof(t))
-void *arena_push_size(Arena *arena, size_t size) {
-    if (size > PAGE_SIZE - sizeof(PageFooter)) {
-        // error("size > maximum allocable");
-        return NULL;
-    }
-    if (!arena->page || arena->used + size > PAGE_SIZE) {
-        // Allocate a new page.
-        void *new_page = NULL;
-        if (platform_free_pages != NULL) {
-            new_page = platform_free_pages;
-            platform_free_pages = *(void **)new_page;
-        } else {
-            new_page = platform_alloc_page();
-        }
-        PageFooter *footer = (PageFooter *)((uint8_t *)new_page +
-                                            (PAGE_SIZE - sizeof(PageFooter)));
-        footer->prev = (PageFooter *)arena->page;
-        arena->page = new_page;
-        arena->used = 0;
-    }
-    if (size > (PAGE_SIZE - sizeof(PageFooter)) - arena->used) {
-        // error("No room for some reason???");
-        return NULL;
-    }
-    void *result = arena->page + arena->used;
-    arena->used += size;
-    return result;
-}
-
-void arena_free(Arena *arena) {
-    void *page = arena->page;
-    while (page) {
-        PageFooter *footer =
-            (PageFooter *)((uint8_t *)page + (PAGE_SIZE - sizeof(PageFooter)));
-        *(void **)page = platform_free_pages;
-        platform_free_pages = page;
-        page = footer->prev;
-    }
-    arena->page = NULL;
-    arena->used = 0;
-}
-
-// End Arena
+#include "metvan.c"
 
 EXPORT int test() { return 101; }
-
-typedef struct {
-    Arena arena;
-
-    f32 player_x;
-    f32 player_y;
-} GameState;
-
-// typedef struct {
-
-// } Renderer;
-
-// @TODO: This is not how we want this to work.
-typedef struct {
-    u32 up;
-    u32 down;
-    u32 left;
-    u32 right;
-    u32 jump;
-
-    u32 view_map;
-} Input;
-
-// @TODO: Figure out if these are always u32 or what we would need to do to
-// make sure the javascript type matching code always works.
-typedef enum {
-    DebugPink,
-    Black,
-    DarkPurple,
-    DarkBlue,
-    DarkGray,
-    Gray,
-    MediumBlue,
-    LightBlue,
-    White,
-    LightSand,
-    MediumSand,
-    DarkSand,
-    Rock,
-    DarkRock,
-    Red,
-    Green,
-    Blue,
-} Color;
-
-typedef struct {
-    f64 world_center_x;
-    f64 world_center_y;
-    f64 world_extent_x;
-    f64 world_extent_y;
-    u32 color;
-} RenderRect;
-
-typedef struct {
-    u8 magic;
-    u32 another_thing;
-    u32 *pointer_to_foo;
-
-    Input input;
-
-    RenderRect render_rects[128];
-    u32 render_rects_count;
-
-    GameState *gamestate;
-} Platform;
 
 EXPORT void *init() {
     Arena _arena;
     Platform *platform = arena_push_type(&_arena, Platform);
-    GameState *gamestate = arena_push_type(&_arena, GameState);
-    platform->gamestate = gamestate;
-    gamestate->arena = _arena;
-
-    gamestate->player_x = 5.0;
-    gamestate->player_y = 5.0;
-
-    platform->magic = 99;
-    platform->another_thing = 12345;
-    platform->pointer_to_foo = arena_push_type(&gamestate->arena, u32);
-    *platform->pointer_to_foo = 222;
-
-    platform->render_rects_count = 0;
-
+    platform->arena = _arena;
+    platform->renderer.render_rects_count = 0;
+    platform->t = 0.0;
+    platform->input = (Input){0};
+    platform->gamestate = NULL;
     return platform;
 }
 
 EXPORT void update_and_render(Platform *platform) {
+    game_update_and_render(platform);
     // char s[11] = {'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd'};
     // for (int i = 0; i < 11; i++) {
     //     js_putc(s[i]);
     // }
     // js_putc('\n');
-
-    GameState *gamestate = platform->gamestate;
-
-    if (platform->input.up) {
-        js_putc('W');
-        js_putc('\n');
-    }
-
-    platform->render_rects[0].world_center_x = gamestate->player_x;
-    platform->render_rects[0].world_center_y = gamestate->player_y + 1.0;
-    platform->render_rects[0].world_extent_x = 0.5;
-    platform->render_rects[0].world_extent_y = 1.0;
-    platform->render_rects[0].color = LightBlue;
-    platform->render_rects_count = 1;
 }
