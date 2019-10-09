@@ -89,23 +89,62 @@ EXPORT int test() { return 101; }
 
 typedef struct {
     Arena arena;
+
+    f32 player_x;
+    f32 player_y;
 } GameState;
+
+// typedef struct {
+
+// } Renderer;
+
+// @TODO: This is not how we want this to work.
+typedef struct {
+    u32 up;
+    u32 down;
+    u32 left;
+    u32 right;
+    u32 jump;
+
+    u32 view_map;
+} Input;
+
+// @TODO: Figure out if these are always u32 or what we would need to do to
+// make sure the javascript type matching code always works.
+typedef enum {
+    DebugPink,
+    Black,
+    DarkPurple,
+    DarkBlue,
+    DarkGray,
+    Gray,
+    MediumBlue,
+    LightBlue,
+    White,
+    LightSand,
+    MediumSand,
+    DarkSand,
+    Rock,
+    DarkRock,
+    Red,
+    Green,
+    Blue,
+} Color;
 
 typedef struct {
     f64 world_center_x;
     f64 world_center_y;
     f64 world_extent_x;
     f64 world_extent_y;
+    u32 color;
 } RenderRect;
-
-// typedef struct {
-
-// } Renderer;
 
 typedef struct {
     u8 magic;
     u32 another_thing;
     u32 *pointer_to_foo;
+
+    Input input;
 
     RenderRect render_rects[128];
     u32 render_rects_count;
@@ -120,20 +159,37 @@ EXPORT void *init() {
     platform->gamestate = gamestate;
     gamestate->arena = _arena;
 
+    gamestate->player_x = 5.0;
+    gamestate->player_y = 5.0;
+
     platform->magic = 99;
     platform->another_thing = 12345;
     platform->pointer_to_foo = arena_push_type(&gamestate->arena, u32);
     *platform->pointer_to_foo = 222;
+
+    platform->render_rects_count = 0;
+
     return platform;
 }
 
 EXPORT void update_and_render(Platform *platform) {
-    char s[11] = {'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd'};
-    for (int i = 0; i < 11; i++) {
-        js_putc(s[i]);
-    }
-    js_putc('\n');
+    // char s[11] = {'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd'};
+    // for (int i = 0; i < 11; i++) {
+    //     js_putc(s[i]);
+    // }
+    // js_putc('\n');
 
-    platform->render_rects[0].world_center_x = 11;
+    GameState *gamestate = platform->gamestate;
+
+    if (platform->input.up) {
+        js_putc('W');
+        js_putc('\n');
+    }
+
+    platform->render_rects[0].world_center_x = gamestate->player_x;
+    platform->render_rects[0].world_center_y = gamestate->player_y + 1.0;
+    platform->render_rects[0].world_extent_x = 0.5;
+    platform->render_rects[0].world_extent_y = 1.0;
+    platform->render_rects[0].color = LightBlue;
     platform->render_rects_count = 1;
 }

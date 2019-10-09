@@ -219,11 +219,22 @@ const memory = new WebAssembly.Memory({ initial: 2 });
 let platformPtr = -1;
 let platform = null;
 
+const inputFields = [
+    { name: "up", type: { kind: "u32" } },
+    { name: "down", type: { kind: "u32" } },
+    { name: "left", type: { kind: "u32" } },
+    { name: "right", type: { kind: "u32" } },
+    { name: "jump", type: { kind: "u32" } },
+    { name: "view_map", type: { kind: "u32" } },
+];
+const inputStruct = struct("Input", inputFields);
+
 const renderRectFields = [
     { name: "world_center_x", type: { kind: "f64" } },
     { name: "world_center_y", type: { kind: "f64" } },
     { name: "world_extent_x", type: { kind: "f64" } },
     { name: "world_extent_y", type: { kind: "f64" } },
+    { name: "color", type: { kind: "u32" } },
 ];
 const renderRectStruct = struct("RenderRect", renderRectFields);
 
@@ -231,6 +242,7 @@ const platformFields = [
     { name: "magic", type: { kind: "u8" } },
     { name: "another_thing", type: { kind: "u32" } },
     { name: "pointer_to_foo", type: { kind: "ptr", to: { kind: "u32" } } },
+    { name: "input", type: { kind: inputStruct } },
     { name: "render_rects", type: { kind: "array", of: { kind: renderRectStruct }, count: 128 } },
     { name: "render_rects_count", type: { kind: "u32" } },
     { name: "gamestate", type: { kind: "ptr", to: { kind: "void" } } },
@@ -285,37 +297,140 @@ const importObj = {
     }
 };
 
+const colors = [
+    "pink",
+    "#000000",
+    "#262144",
+    "#355278",
+    "#60748a",
+    "#898989",
+    "#5aa8b2",
+    "#91d9f3",
+    "#ffffff",
+    "#f4cd72",
+    "#bfb588",
+    "#c58843",
+    "#9e5b47",
+    "#5f4351",
+    "#dc392d",
+    "#6ea92c",
+    "#1651dd",
+];
+
 WebAssembly.instantiateStreaming(fetch('metvan.wasm'), importObj)
     .then(obj => {
         let exports = obj.instance.exports;
         window.exports = exports;
-        console.log(exports);
-        let test = exports.test;
-        console.log("Test: ", test());
 
         platformPtr = exports.init();
-        console.log(platformPtr);
         js_resetMemoryViews();
 
-        console.log("Magic");
-        console.log(platform.magic);
-        console.log("Another Thing");
-        console.log(platform.another_thing);
-        console.log("Pointer to foo");
-        console.log(platform.pointer_to_foo);
-        console.log("Pointer to gamestate");
-        console.log(platform.gamestate);
-        // this fuckin works!
+        // record keypresses n shit urself.
+        let canvas = document.getElementById("canvas");
+        let ctx = canvas.getContext("2d");
+        let dpr = window.devicePixelRatio;
+        console.log("Dpr: ", dpr);
+
+        let last_t = 0.0;
+        let dt = 0.0;
+
+        function onkey(ev, key, pressed) {
+            let handled = true;
+            switch (key) {
+                case KeyboardEvent.DOM_VK_W: {
+                    platform.input.up = pressed ? 1 : 0;
+                } break;
+                case KeyboardEvent.DOM_VK_A: {
+                    platform.input.left = pressed ? 1 : 0;
+                } break;
+                case KeyboardEvent.DOM_VK_S: {
+                    platform.input.down = pressed ? 1 : 0;
+                } break;
+                case KeyboardEvent.DOM_VK_D: {
+                    platform.input.right = pressed ? 1 : 0;
+                } break;
+                case KeyboardEvent.DOM_VK_SPACE: {
+                    platform.input.jump = pressed ? 1 : 0;
+                } break;
+                case KeyboardEvent.DOM_VK_M: {
+                    platform.input.view_map = pressed ? 1 : 0;
+                } break;
+                default: {
+                    handled = false;
+                } break;
+            }
+            if (handled) {
+                ev.preventDefault();
+            }
+        }
+
+        document.addEventListener('keydown', function (ev) { return onkey(ev, ev.keyCode, true); }, false);
+        document.addEventListener('keyup', function (ev) { return onkey(ev, ev.keyCode, false); }, false);
+
+        function renderLoop() {
+            let t = window.performance.now();
+            //platform.update(t);
+            exports.update_and_render(platformPtr);
+
+            // Render in js.
+            let displayWidth = canvas.clientWidth * dpr;
+            let displayHeight = canvas.clientHeight * dpr;
+
+            if (canvas.width != displayWidth || canvas.height != displayHeight) {
+                canvas.width = displayWidth;
+                canvas.height = displayHeight;
+                ctx.scale(dpr, dpr);
+                console.log("Resizing");
+            }
+
+            let width = self.canvas.clientWidth;
+            let height = self.canvas.clientHeight;
+            let aspect_ratio = width / height;
+
+            // Tile Size
+            let ts = width / 32.0;
+
+            ctx.clearRect(0.0, 0.0, width, height);
+            ctx.save();
+            ctx.translate(0.0, height);
+
+            ctx.fillRect(0, -ts, ts, ts);
+            for (let i = 0; i < platform.render_rects_count; i++) {
+                ctx.save();
+                let rect = platform.render_rects[i];
+                let color = colors[rect.color];
+                let x = (rect.world_center_x - rect.world_extent_x) * ts;
+                let y = (rect.world_center_y + rect.world_extent_y) * ts;
+                let w = rect.world_extent_x * 2.0 * ts;
+                let h = rect.world_extent_y * 2.0 * ts;
+                ctx.fillStyle = color;
+                ctx.fillRect(x, -y, w, h);
+                ctx.restore();
+            }
+
+            ctx.restore();
+
+            requestAnimationFrame(renderLoop);
+        }
+        renderLoop();
+
+        // console.log("Magic");
+        // console.log(platform.magic);
+        // console.log("Another Thing");
+        // console.log(platform.another_thing);
+        // console.log("Pointer to foo");
+        // console.log(platform.pointer_to_foo);
+        // console.log("Pointer to gamestate");
+        // console.log(platform.gamestate);
+        // // this fuckin works!
 
         // fuck yeah, now we can set values.
-        platform.another_thing = 666;
-        platform.pointer_to_foo = 111;
-        exports.update_and_render(platformPtr);
+        // platform.another_thing = 666;
+        // platform.pointer_to_foo = 111;
 
-        // Get pointers working (arrays are gonna be important soon too)
-        console.log(platform.render_rects[0].world_center_x);
-        console.log(platform.render_rects[0].world_center_y);
-    });
+        // console.log(platform.render_rects[0].world_center_x);
+        // console.log(platform.render_rects[0].world_center_y);
+    }).catch(console.error);;
 
 
 // Things I need to get this working.
