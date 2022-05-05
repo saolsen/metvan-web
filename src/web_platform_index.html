@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Metvan Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            border: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #canvas {
+            width: 100vw;
+            height: calc(100vw * 9 / 16);
+            margin: auto;
+            position: absolute;
+            top: 0px;
+            right: 0px;
+            bottom: 0px;
+            left: 0px;
+            background: #898989;
+        }
+
+        /* // @TODO: scaling like this messes up my canvas size
+    @media (min-width: 177.778vh) {
+      #canvas {
+        height: 100vw;
+        width: calc(100vh * 16 / 9);
+      }
+    } */
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="web_platform.js"></script>
+</body>
+
+</html>

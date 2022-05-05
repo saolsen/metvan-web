@@ -10,10 +10,23 @@
             "problemMatcher": [
                 "$rustc"
             ],
+        },
+        {
+            "label": "build_web",
+            "type": "shell",
+            "command": "./build_web.sh",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "options": {
+                "env": {
+                    "CC": "/usr/local/opt/llvm/bin/clang"
+                }
+            },
             "group": {
                 "kind": "build",
                 "isDefault": true
-            }
+            },
         }
     ]
 }
