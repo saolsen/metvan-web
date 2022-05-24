@@ -1,3 +1,9 @@
+# Metvan
+
+Old prototype of a procedural metroidvania game I was gonna make.
+play at https://game.steveindusteves.com/
+probably doesn't work
+
 ## How to install
 
 ```sh
